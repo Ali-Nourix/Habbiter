@@ -20,6 +20,8 @@ export type Mode = "month" | "grid";
 export type CellKind = "check" | "count";
 /** Which side the trackers take when the block also carries text. */
 export type Side = "none" | "start" | "end";
+/** How a month's worth of day columns is broken up so it fits the note. */
+export type Band = "week" | "none";
 
 export interface BlockConfig {
   id?: string;
@@ -38,6 +40,8 @@ export interface BlockConfig {
   totals?: boolean;
   streak?: boolean;
   size?: number;
+  /** Grid mode, day columns: break the month into weeks, or run it flat. */
+  band?: Band;
   side?: Side;
   /** Markdown set beside the trackers, inside the block. */
   text?: string;
@@ -76,6 +80,7 @@ export interface ResolvedConfig {
   totals: boolean;
   streak: boolean;
   size: number;
+  band: Band;
   side: Side;
   round: boolean;
   alwaysShowControls: boolean;
@@ -171,6 +176,9 @@ function readConfig(raw: Record<string, unknown>): BlockConfig {
   /* wrap was this option's name in 1.2.0, when it floated the block. */
   const side = readSide(raw.side ?? raw.wrap ?? raw.align);
   if (side) config.side = side;
+
+  const band = asEnum(raw.band ?? raw.weeks, ["week", "none"] as const);
+  if (band) config.band = band;
 
   const text = asString(raw.text ?? raw.note);
   if (text !== undefined) config.text = text;
@@ -270,6 +278,7 @@ export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): R
     totals: block.totals ?? settings.totals,
     streak: block.streak ?? settings.streak,
     size: clamp(block.size ?? settings.size, MIN_SIZE, MAX_SIZE),
+    band: block.band ?? settings.band,
     side: block.side ?? settings.side,
     round: settings.round,
     alwaysShowControls: settings.alwaysShowControls,
@@ -327,6 +336,7 @@ const KEY_ORDER: Array<keyof BlockConfig> = [
   "totals",
   "streak",
   "size",
+  "band",
   "side",
   "text",
 ];
@@ -381,6 +391,7 @@ export function pruneToDefaults(
     "totals",
     "streak",
     "size",
+    "band",
     "side",
   ] as const;
 

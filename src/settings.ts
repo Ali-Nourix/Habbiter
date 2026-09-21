@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import type { CalendarSystem, Numerals } from "./calendar";
-import type { CellKind, Mode, Side } from "./config";
+import type { Band, CellKind, Mode, Side } from "./config";
 
 export interface HabbiterSettings {
   mode: Mode;
@@ -24,6 +24,8 @@ export interface HabbiterSettings {
   streak: boolean;
   /** The side of a cell in px. The visual mark, not the hit area. */
   size: number;
+  /** A month of day columns is 31 wide; this is how it is made to fit. */
+  band: Band;
   /** Which side a tracker takes when its block also carries text. */
   side: Side;
   /** Round cells instead of following the theme's checkbox corner. */
@@ -45,6 +47,7 @@ export const DEFAULT_SETTINGS: HabbiterSettings = {
   totals: false,
   streak: true,
   size: 26,
+  band: "week",
   side: "start",
   round: false,
   alwaysShowControls: false,

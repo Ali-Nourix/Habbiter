@@ -293,6 +293,73 @@
   block-size: var(--hb-cell);
 }
 
+/* --- A month broken into weeks -------------------------------------------
+   One grid, every row on the same template, so the weekday names at the
+   top, the dates in each band and the cells under them sit in the same
+   columns all the way down. That alignment is what lets the weekday be
+   said once — the alternative was a letter and a date crammed into 26px,
+   which is what a flat month came to, with a scrollbar after it. */
+
+.hb-bands {
+  display: grid;
+  grid-template-columns: repeat(var(--hb-cols), var(--hb-cell));
+  gap: var(--hb-gap);
+  align-items: center;
+  justify-content: start;
+  inline-size: max-content;
+  max-inline-size: 100%;
+}
+
+.hb-bands.has-labels {
+  grid-template-columns: [labels] max-content repeat(var(--hb-cols), var(--hb-cell));
+}
+
+/* Air between one week and the next, so each reads as a unit rather than
+   the month reading as one field of boxes. */
+.hb-bandgap {
+  grid-column: 1 / -1;
+  block-size: var(--hb-gap-wide);
+}
+
+/* The label column is written on every line, and the lines that have no
+   label of their own still have to hold it open. */
+.hb-rowhead.is-spacer {
+  visibility: hidden;
+}
+
+/* The month's tallies run across the day columns instead of taking columns
+   of their own, which would break the template every other row shares. */
+.hb-stats-row {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-gap) var(--hb-gap-wide);
+  color: var(--hb-muted);
+}
+
+.hb-bands:not(.has-labels) .hb-stats-row {
+  grid-column: 1 / -1;
+}
+
+/* A gap, not a margin. "Total" is a Latin run and "۱۸" is an Arabic-Indic
+   one; where the bidi algorithm puts the boundary between them is not
+   where a margin on either of them lands, and the two came out touching.
+   Flex spacing is between the items wherever they end up. */
+.hb-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+
+.hb-stat-name {
+  color: var(--hb-muted);
+}
+
+.hb-stat-value {
+  color: var(--hb-ink);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Cells ---------------------------------------------------------------- */
 
 .hb-root button.hb-cell {

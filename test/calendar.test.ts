@@ -4,6 +4,7 @@
    a table, so a wrong answer shows up as a date that will not convert back. */
 
 import {
+  DAYS_IN_WEEK,
   addDays,
   civilOf,
   dateOf,
@@ -11,6 +12,7 @@ import {
   isoKey,
   monthLength,
   monthTitle,
+  intoWeeks,
   shiftMonths,
   startOfMonth,
   weekdayLabels,
@@ -60,5 +62,34 @@ ok(
   "Latin numerals override the locale",
   monthTitle(new Date(2026, 8, 21), "persian", "fa", "latin").includes("1405"),
 );
+
+/* --- Weeks --------------------------------------------------------------
+   A month laid flat is 31 columns and ends in a scrollbar. Broken into
+   weeks it stacks — but only if every week is seven long and starts on the
+   same weekday, because that is what lines the columns up down the page. */
+
+const days = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+const shape = (weeks: Array<Array<number | null>>) =>
+  weeks.map((w) => w.map((d) => d ?? "·").join(" ")).join(" | ");
+
+const sunFirst = intoWeeks(days(31), 2, 0); // a month starting on a Tuesday
+check("a 31-day month is five weeks", sunFirst.length, 5);
+ok("every week is seven long", sunFirst.every((w) => w.length === DAYS_IN_WEEK));
+check("the first week is padded to its weekday", shape([sunFirst[0]]), "· · 1 2 3 4 5");
+check("the last week is padded to the end", shape([sunFirst[4]]), "27 28 29 30 31 · ·");
+check(
+  "every day appears exactly once",
+  sunFirst.flat().filter((d) => d !== null).join(","),
+  days(31).join(","),
+);
+
+/* The same month read by somebody whose week starts on Saturday: the same
+   days, shifted by one column. */
+const satFirst = intoWeeks(days(31), 2, 6);
+check("a Saturday week shifts the padding", shape([satFirst[0]]), "· · · 1 2 3 4");
+
+check("a month starting on the week's first day needs no lead", shape([intoWeeks(days(28), 1, 1)[0]]), "1 2 3 4 5 6 7");
+check("four exact weeks stay four", intoWeeks(days(28), 1, 1).length, 4);
+check("nothing in, nothing out", intoWeeks([], 0, 0).length, 0);
 
 report();

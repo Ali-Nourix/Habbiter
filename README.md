@@ -58,6 +58,7 @@ Everything is optional except `id`. Anything left out follows
 | `goal` | Counter only: what a full cell means. Clicking cycles up to it and back to zero. |
 | `rows` | Grid only: a list of row names. |
 | `columns` | Grid only: a list of names, a plain number, or `days` for the month. |
+| `band` | Day columns: `week` breaks the month into stacked weeks, `none` runs it flat. |
 | `calendar` | `gregorian` or `persian`. |
 | `month` | `current`, or a year-month in the block's own calendar: `2026-09`. |
 | `weekStart` | `auto`, a weekday name, or `0`–`6` with `0` as Sunday. |
@@ -67,6 +68,30 @@ Everything is optional except `id`. Anything left out follows
 | `size` | The side of a cell in pixels, 20 to 44. |
 | `wrap` | `none` for a band of its own, or `start` / `end` to let text run beside it. `left` and `right` are accepted and mean the same. |
 | `trackers` | A list, to put several in one block. See below. |
+
+### A month that fits
+
+A grid with a column per day is 31 wide, which no note is — flat, it ends in
+a horizontal scrollbar, and a scrollbar is where a tracker stops being
+glanced at. So `columns: days` breaks the month into weeks and stacks them:
+
+```
+      S   M   T   W   T   F   S        ← said once, because every week
+                                          starts in the same column
+          1   2   3   4   5
+Meditate  ■   ■   □   ■   □
+Read      □   ■   ■   □   ■
+
+      6   7   8   9  10  11  12
+Meditate  ■   □   ■   □   ■   ■
+Read      ■   ■   □   ■   □   □
+
+Meditate  Total 18   Streak 3
+```
+
+The tallies are for the month, so they are written once at the end rather
+than per week. `band: none` runs the month flat again if you would rather
+scroll.
 
 A grid of four habits across the month:
 

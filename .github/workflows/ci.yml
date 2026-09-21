@@ -1,0 +1,51 @@
+# Typecheck, test, bundle — and then check that the main.js in the repository
+# is the one this source produces. The built file is committed so the plugin
+# can be installed by copying three files out of the repo, and a committed
+# build artefact is only worth having if something notices when it goes stale.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck, test and bundle
+        run: npm run build
+
+      - name: The committed main.js is the one this source builds
+        run: |
+          if ! git diff --quiet -- main.js; then
+            echo "::error file=main.js::main.js is out of date. Run 'npm run build' and commit the result."
+            git diff --stat -- main.js
+            exit 1
+          fi
+
+      - name: The manifest and the package agree on a version
+        run: |
+          manifest=$(node -p "require('./manifest.json').version")
+          package=$(node -p "require('./package.json').version")
+          echo "manifest.json $manifest / package.json $package"
+          [ "$manifest" = "$package" ] || {
+            echo "::error file=manifest.json::manifest.json says $manifest, package.json says $package"
+            exit 1
+          }

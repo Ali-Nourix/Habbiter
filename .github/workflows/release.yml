@@ -112,17 +112,20 @@ jobs:
           if gh release view "$VERSION" >/dev/null 2>&1; then
             have=$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')
             out=$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')
-            # Out already, and carrying its files: that is a shipped release
-            # and not something to overwrite. Anything else — no files, or
-            # never published — is a release that did not finish, and
-            # finishing it is the job.
-            if [ "$out" = "true" ] && [ "$have" = "$WANTED" ]; then
+            full=$(gh release view "$VERSION" --json isPrerelease -q '.isPrerelease | not')
+            # Out already, a full release, and carrying its files: that is a
+            # shipped release and not something to overwrite. Anything short
+            # of all three did not finish, and finishing it is the job.
+            if [ "$out" = "true" ] && [ "$full" = "true" ] && [ "$have" = "$WANTED" ]; then
               echo "::error::$VERSION is already out with its files. Bump the version."
               exit 1
             fi
-            echo "completing the existing release for $VERSION (published=$out, files=[$have])"
+            echo "completing $VERSION (published=$out, full=$full, files=[$have])"
             gh release upload "$VERSION" main.js manifest.json styles.css --clobber
-            gh release edit "$VERSION" --draft=false --latest
+            # Two calls, not one: --latest is refused while the release is
+            # still marked draft or prerelease, so those come off first.
+            gh release edit "$VERSION" --draft=false --prerelease=false
+            gh release edit "$VERSION" --latest
           else
             gh release create "$VERSION" \
               --title "$VERSION" \
@@ -137,11 +140,14 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          gh release view "$VERSION" --json isDraft,url,assets \
-            -q '"published: " + (.isDraft | not | tostring), "url: " + .url,
+          gh release view "$VERSION" --json isDraft,isPrerelease,url,assets \
+            -q '"published: " + (.isDraft | not | tostring),
+                "prerelease: " + (.isPrerelease | tostring),
+                "url: " + .url,
                 (.assets[] | "  " + .name + "  " + (.size | tostring) + " bytes")'
 
           # A green run that shipped nothing is the failure this whole file
           # exists to avoid, so it is asserted rather than eyeballed.
           [ "$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')" = "true" ]
+          [ "$(gh release view "$VERSION" --json isPrerelease -q '.isPrerelease')" = "false" ]
           [ "$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')" = "main.js,manifest.json,styles.css" ]

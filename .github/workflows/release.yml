@@ -6,8 +6,13 @@
 # with a version, and it mints the tag itself from the branch it was started
 # on, which is the path for anywhere a tag cannot be pushed by hand.
 #
-# Either way what comes out is a draft. Publishing is a decision, not a side
-# effect of asking for a build.
+# What comes out is a published release. A draft keeps its files to itself —
+# they are not on the tag and nobody can download them — which defeats the
+# point of building them.
+#
+# Re-running a version whose release is still unpublished finishes it rather
+# than failing: that is the case where the files exist but nobody can reach
+# them. A version that is already published is left alone.
 
 name: Release
 
@@ -60,11 +65,13 @@ jobs:
           }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Refuse to reuse a tag
-        if: github.event_name == 'workflow_dispatch'
+      - name: Refuse to rewrite a release that is already out
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.version }}" >/dev/null; then
-            echo "::error::tag ${{ steps.version.outputs.version }} already exists"
+          if gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null | grep -qx false; then
+            echo "::error::$VERSION is already published. Bump the version."
             exit 1
           fi
 
@@ -85,18 +92,35 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "tag $VERSION already exists, leaving it where it points"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "Habbiter $VERSION"
           git push origin "refs/tags/$VERSION"
 
-      - name: Draft the release
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --draft \
-            --generate-notes \
-            main.js manifest.json styles.css
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            # An unpublished release from an earlier run: replace its files
+            # with the ones just built, then put it out.
+            gh release upload "$VERSION" main.js manifest.json styles.css --clobber
+            gh release edit "$VERSION" --draft=false --latest
+          else
+            gh release create "$VERSION" \
+              --title "$VERSION" \
+              --latest \
+              --generate-notes \
+              main.js manifest.json styles.css
+          fi
+
+          echo "Files on the tag:"
+          gh release view "$VERSION" --json isDraft,assets \
+            -q '"published=" + (.isDraft | not | tostring), (.assets[] | "  " + .name + "  " + (.size|tostring) + " bytes")'
+
+          gh release view "$VERSION" --json isDraft -q .isDraft | grep -qx false

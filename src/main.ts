@@ -12,13 +12,16 @@ import type { Editor, MarkdownPostProcessorContext, Menu } from "obsidian";
 import { BuilderModal } from "./builder";
 import {
   BLOCK_LANGUAGE,
+  buildGroup,
   newTrackerId,
   parseBlock,
   resolveConfig,
-  serializeConfig,
+  serializeBlock,
   toCodeBlock,
+  trackersOf,
 } from "./config";
-import type { BlockConfig } from "./config";
+import type { BlockConfig, BlockDocument } from "./config";
+import { TrackerGroup } from "./group";
 import { HabbiterSettingTab } from "./settings-tab";
 import { Store } from "./store";
 import { TrackerView } from "./tracker";
@@ -32,6 +35,12 @@ const CLOSING_FENCE = /^\s*`{3,}\s*$/;
 interface MountedTracker {
   view: TrackerView;
   block: BlockConfig;
+}
+
+/** The whole of a block, so a write can put back what it did not change. */
+interface BlockHandle {
+  doc: BlockDocument;
+  write: (next: BlockDocument) => Promise<boolean>;
 }
 
 export default class HabbiterPlugin extends Plugin {
@@ -92,47 +101,94 @@ export default class HabbiterPlugin extends Plugin {
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
   ): Promise<void> {
-    const { config: block, error } = parseBlock(source);
+    const { doc, error } = parseBlock(source);
     if (error) {
       renderError(el, error);
       return;
     }
 
-    let id = block.id;
-    let unanchored = false;
+    /* Writing the ids back re-renders the block, which is when it gets drawn
+       for real — so there is nothing to do here but wait for it. */
+    if (await this.claimIds(doc, el, ctx)) return;
 
-    if (!id) {
-      /* Writing the id back re-renders the block, which is when it gets
-         drawn for real — so there is nothing to do here but wait for it. */
-      if (await this.claimId(block, el, ctx)) return;
-      id = fallbackId(ctx.sourcePath, block);
-      unanchored = true;
-    }
+    const handle: BlockHandle = {
+      doc,
+      write: (next) => this.writeBlock(el, ctx, next),
+    };
+    const anchored = trackersOf(doc).map((tracker, index) => ({
+      tracker,
+      index,
+      id: tracker.id ?? fallbackId(ctx.sourcePath, tracker, index),
+      unanchored: !tracker.id,
+    }));
 
-    const anchored: BlockConfig = { ...block, id };
-    const view = new TrackerView(el, {
-      config: resolveConfig(anchored, this.store.settings),
-      block: anchored,
-      values: new StoreValues(this.store, id),
-      writeBlock: (next) => this.writeBlock(el, ctx, next),
-      openBuilder: () => this.openBuilderForEdit(anchored, el, ctx),
-      unanchored,
+    const mounted = anchored.map(({ tracker, index, id, unanchored }) => {
+      const block: BlockConfig = { ...tracker, id };
+      return {
+        config: resolveConfig(block, this.store.settings),
+        block,
+        deps: {
+          config: resolveConfig(block, this.store.settings),
+          block,
+          values: new StoreValues(this.store, id),
+          writeBlock: (next: BlockConfig) => this.writeTracker(handle, index, next),
+          openBuilder: () => this.openBuilderForEdit(handle, index, block),
+          addBeside: () => this.openBuilderForAdd(handle, index),
+          removeFromGroup: () => void this.removeTracker(handle, index),
+          unanchored,
+        },
+      };
     });
 
-    const entry: MountedTracker = { view, block: anchored };
+    if (mounted.length === 1) {
+      const only = mounted[0];
+      const view = new TrackerView(el, only.deps);
+      this.track(view, only.block);
+      ctx.addChild(view);
+      return;
+    }
+
+    const group = new TrackerGroup(el, {
+      trackers: mounted,
+      reorder: (order) => this.writeOrder(handle, order),
+    });
+    ctx.addChild(group);
+  }
+
+  private track(view: TrackerView, block: BlockConfig): void {
+    const entry: MountedTracker = { view, block };
     this.mounted.add(entry);
     view.register(() => this.mounted.delete(entry));
-    ctx.addChild(view);
+  }
+
+  /* --- Changing one tracker inside a block --------------------------------- */
+
+  private writeTracker(
+    handle: BlockHandle,
+    index: number,
+    next: BlockConfig,
+  ): Promise<boolean> {
+    const trackers = trackersOf(handle.doc);
+    trackers[index] = next;
+    return handle.write(buildGroup(trackers, this.store.settings));
+  }
+
+  private writeOrder(handle: BlockHandle, order: number[]): Promise<boolean> {
+    const trackers = trackersOf(handle.doc);
+    return handle.write(buildGroup(order.map((i) => trackers[i]), this.store.settings));
   }
 
   /* --- Writing the fence -------------------------------------------------- */
 
-  /** True when an id was written and a re-render is on its way. */
-  private async claimId(
-    block: BlockConfig,
+  /** True when ids were written and a re-render is on its way. */
+  private async claimIds(
+    doc: BlockDocument,
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
   ): Promise<boolean> {
+    const trackers = trackersOf(doc);
+    if (trackers.every((tracker) => tracker.id)) return false;
+
     const info = ctx.getSectionInfo(el);
     if (!info) return false;
 
@@ -141,7 +197,8 @@ export default class HabbiterPlugin extends Plugin {
     this.claiming.add(claim);
 
     try {
-      return await this.writeBlock(el, ctx, { ...block, id: newTrackerId() });
+      const named = trackers.map((tracker) => ({ ...tracker, id: tracker.id ?? newTrackerId() }));
+      return await this.writeBlock(el, ctx, buildGroup(named, this.store.settings));
     } finally {
       this.claiming.delete(claim);
     }
@@ -150,7 +207,7 @@ export default class HabbiterPlugin extends Plugin {
   private async writeBlock(
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
-    next: BlockConfig,
+    next: BlockDocument,
   ): Promise<boolean> {
     const info = ctx.getSectionInfo(el);
     const file = this.app.vault.getFileByPath(ctx.sourcePath);
@@ -190,15 +247,41 @@ export default class HabbiterPlugin extends Plugin {
       settings: this.store.settings,
       initial: { id: newTrackerId() },
       intent: "insert",
-      onSubmit: (config) => insertAtCursor(editor, toCodeBlock(config)),
+      onSubmit: (config) =>
+        insertAtCursor(editor, toCodeBlock({ shared: config, group: null })),
     }).open();
   }
 
-  private openBuilderForEdit(
-    block: BlockConfig,
-    el: HTMLElement,
-    ctx: MarkdownPostProcessorContext,
-  ): void {
+  /* Added after the one it was asked for, not at the end: "beside this" is
+     a position, and a row of eight is where that starts to matter. */
+  private openBuilderForAdd(handle: BlockHandle, index: number): void {
+    new BuilderModal(this.app, {
+      settings: this.store.settings,
+      initial: { id: newTrackerId() },
+      intent: "insert",
+      onSubmit: (config) => {
+        const trackers = trackersOf(handle.doc);
+        trackers.splice(index + 1, 0, config);
+        void handle.write(buildGroup(trackers, this.store.settings)).then((ok) => {
+          if (!ok) new Notice("Habbiter could not find this block to add to it.");
+        });
+      },
+    }).open();
+  }
+
+  /* The ticks are keyed by the tracker's id, not by its place in a block, so
+     they sit where they are and come back if it is put back. */
+  private async removeTracker(handle: BlockHandle, index: number): Promise<void> {
+    const trackers = trackersOf(handle.doc);
+    if (trackers.length <= 1) {
+      new Notice("A block needs one tracker. Delete the block instead.");
+      return;
+    }
+    trackers.splice(index, 1);
+    await handle.write(buildGroup(trackers, this.store.settings));
+  }
+
+  private openBuilderForEdit(handle: BlockHandle, index: number, block: BlockConfig): void {
     const id = block.id ?? newTrackerId();
     new BuilderModal(this.app, {
       settings: this.store.settings,
@@ -207,7 +290,7 @@ export default class HabbiterPlugin extends Plugin {
       sample: new StoreValues(this.store, id),
       onSubmit: (config) => {
         this.migrateLabels(id, block, config);
-        void this.writeBlock(el, ctx, config).then((ok) => {
+        void this.writeTracker(handle, index, config).then((ok) => {
           if (!ok) new Notice("Habbiter could not find this block to update it.");
         });
       },
@@ -248,9 +331,9 @@ function renderError(el: HTMLElement, message: string): void {
    preview, an embed of a read-only note. The tracker still draws and still
    takes clicks; they simply have nowhere permanent to go, which the view
    says out loud rather than leaving the reader to discover. */
-function fallbackId(sourcePath: string, block: BlockConfig): string {
+function fallbackId(sourcePath: string, block: BlockConfig, index: number): string {
   let hash = 5381;
-  const seed = `${sourcePath}\u0000${serializeConfig(block)}`;
+  const seed = `${sourcePath}\u0000${index}\u0000${serializeBlock({ shared: block, group: null })}`;
   for (let i = 0; i < seed.length; i++) hash = ((hash << 5) + hash + seed.charCodeAt(i)) | 0;
   return `hb-anon-${(hash >>> 0).toString(36)}`;
 }

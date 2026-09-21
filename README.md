@@ -65,6 +65,7 @@ Everything is optional except `id`. Anything left out follows
 | `numerals` | `locale` or `latin`. |
 | `dayNumbers`, `weekdays`, `totals`, `streak` | What the tracker shows. |
 | `size` | The side of a cell in pixels, 20 to 44. |
+| `trackers` | A list, to put several in one block. See below. |
 
 A grid of four habits across the month:
 
@@ -96,6 +97,48 @@ columns: [Mon, Tue, Wed, Thu, Fri]
 ```
 ````
 
+## Several side by side
+
+One block can hold a row of trackers. They lay themselves out across the
+width of the note and wrap, each one as wide as its own grid:
+
+````markdown
+```habbiter
+calendar: persian
+size: 22
+trackers:
+  - id: hb-k2p9
+    title: مدیتیشن
+  - id: hb-m4x1
+    title: مطالعه
+  - id: hb-q7v3
+    title: پیاده‌روی
+```
+````
+
+Anything the row shares is said once at the top and inherited; anything one
+tracker does differently sits on its own entry. Each keeps its own `id`, so
+each keeps its own ticks.
+
+The quickest way to build one is **⋯ → Add one beside this…** on a tracker
+you already have. **⋯ → Take out of the row** removes one again — its ticks
+are filed under its `id`, not its position, so they are still there if you
+put it back.
+
+**Reordering.** Hover a tracker and drag it by the grip at the top. The row
+rearranges as you go and Escape puts it back. The order is written into the
+block, which is the only place a markdown file can keep one — so it survives
+closing the note, syncing, and anyone else opening it. The same move is in
+**⋯ → Move earlier / Move later**, and on the grip itself with ← and →,
+because a drag is no use from a keyboard.
+
+**What is not on offer:** dragging a tracker to an arbitrary spot on the
+page. A note is a markdown document, not a canvas: there is nowhere in it to
+record that something sits 240px from the left, and anything faking it would
+come apart in reading view, in an export and on a phone. Obsidian's own
+canvas is the place for free positioning — a tracker works in a canvas card
+like anything else.
+
 ## Using one
 
 | | |
@@ -115,11 +158,13 @@ where an empty one is an outline — nothing here is carried by colour alone.
 
 ## Persian
 
-Set **Calendar** to Persian and the months become Farvardin to Esfand, cut at
-the right days, with the week starting on Saturday. Set **Language** to `fa`
-for Persian month and weekday names, and **Numerals** decides whether the
-days are counted in ۰–۹ or 0–9. A tracker in a right-to-left note lays itself
-out right to left.
+Set **Calendar** to Persian — in Settings for the whole vault, in the builder
+for one tracker, or from **⋯ → Show in the Persian calendar** on a tracker in
+front of you. The months become Farvardin to Esfand, cut at the right days,
+named in Persian, counted in ۰–۹, and the week starts on Saturday. The
+calendar brings its own language: **Language** only needs setting to read a
+Persian calendar in some other one, and **Numerals** to count it in 0–9. A
+tracker in a right-to-left note lays itself out right to left.
 
 Ticks are always filed under the real date, so switching a tracker between
 calendars re-labels the grid without losing a single one.

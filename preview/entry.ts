@@ -12,7 +12,9 @@ import { addDays, isoKey, monthLength, startOfMonth, today } from "../src/calend
 
 interface Sample {
   caption: string;
-  block: BlockConfig;
+  block?: BlockConfig;
+  /** A row of trackers in one block, the way a group renders. */
+  row?: BlockConfig[];
   rtl?: boolean;
 }
 
@@ -41,6 +43,22 @@ const SAMPLES: Sample[] = [
       totals: true,
       streak: true,
     },
+  },
+  {
+    caption: "A row of them in one block — drag by the grip to reorder",
+    row: [
+      { id: "g1", title: "Meditate", size: 22 },
+      { id: "g2", title: "Read", size: 22 },
+      { id: "g3", title: "Walk", size: 22 },
+    ],
+  },
+  {
+    caption: "A row on the Persian calendar",
+    row: [
+      { id: "g4", title: "ورزش", calendar: "persian", size: 22 },
+      { id: "g5", title: "مطالعه", calendar: "persian", size: 22 },
+    ],
+    rtl: true,
   },
   {
     caption: "Grid — named columns, counter cells",
@@ -79,18 +97,32 @@ function sampleValues(block: BlockConfig, rows: string[], goal: number): MemoryV
 
 const root = document.getElementById("samples") as HTMLElement;
 
+function mount(host: HTMLElement, block: BlockConfig, group?: boolean): void {
+  const config = resolveConfig(block, DEFAULT_SETTINGS);
+  if (block.id === "b") config.round = true;
+  new TrackerView(host, {
+    config,
+    block,
+    values: sampleValues(block, config.rows, config.cell === "count" ? config.goal : 1),
+    /* The harness has nowhere to write an order to, so the grip is present
+       and labelled but does not rearrange anything. */
+    group: group ? { grab: () => {}, move: () => {}, position: () => ({ index: 0, count: 2 }) } : undefined,
+  }).load();
+}
+
 for (const sample of SAMPLES) {
-  const config = resolveConfig(sample.block, DEFAULT_SETTINGS);
   const figure = root.createDiv({ cls: "sample" });
   figure.createDiv({ cls: "sample-caption", text: sample.caption });
 
   const host = figure.createDiv();
   if (sample.rtl) host.setAttribute("dir", "rtl");
-  if (sample.block.id === "b") config.round = true;
 
-  new TrackerView(host, {
-    config,
-    block: sample.block,
-    values: sampleValues(sample.block, config.rows, config.cell === "count" ? config.goal : 1),
-  }).load();
+  if (sample.row) {
+    const row = host.createDiv({ cls: "hb-group" });
+    for (const block of sample.row) {
+      mount(row.createDiv({ cls: "hb-slot" }).createDiv(), block, true);
+    }
+  } else if (sample.block) {
+    mount(host, sample.block);
+  }
 }

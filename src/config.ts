@@ -39,6 +39,16 @@ export interface BlockConfig {
   columns?: string[] | number | "days";
 }
 
+/* A block holds either one tracker or a row of them. The row keeps its
+   shared settings at the top level and only what differs per entry, so a
+   group of four habits on the same calendar says "calendar" once. */
+export interface BlockDocument {
+  /** Options that apply to every tracker in the block. */
+  shared: BlockConfig;
+  /** One entry per tracker, or null when the block is a single tracker. */
+  group: BlockConfig[] | null;
+}
+
 /** Grid columns, after the shorthands have been worked out. */
 export type ColumnPlan =
   | { kind: "labels"; labels: string[] }
@@ -69,25 +79,50 @@ export interface ResolvedConfig {
 /* --- Reading ------------------------------------------------------------- */
 
 export interface ParseResult {
-  config: BlockConfig;
+  doc: BlockDocument;
   error?: string;
 }
 
+const EMPTY: BlockDocument = { shared: {}, group: null };
+
 export function parseBlock(source: string): ParseResult {
   const text = source.trim();
-  if (!text) return { config: {} };
+  if (!text) return { doc: { shared: {}, group: null } };
 
   let raw: unknown;
   try {
     raw = parseYaml(text);
   } catch (error) {
-    return { config: {}, error: error instanceof Error ? error.message : String(error) };
+    return { doc: EMPTY, error: error instanceof Error ? error.message : String(error) };
   }
-  if (raw === null || raw === undefined) return { config: {} };
+  if (raw === null || raw === undefined) return { doc: { shared: {}, group: null } };
   if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { config: {}, error: "Expected a list of `key: value` options." };
+    return { doc: EMPTY, error: "Expected a list of `key: value` options." };
   }
-  return { config: readConfig(raw as Record<string, unknown>) };
+
+  const record = raw as Record<string, unknown>;
+  const shared = readConfig(record);
+  const entries = record.trackers ?? record.group;
+  if (entries === undefined || entries === null) return { doc: { shared, group: null } };
+  if (!Array.isArray(entries)) {
+    return { doc: EMPTY, error: "`trackers` must be a list, one entry per tracker." };
+  }
+
+  const group = entries
+    .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    .map(readConfig)
+    .slice(0, MAX_GROUP);
+  return { doc: { shared, group } };
+}
+
+/** Every tracker the block draws, with the shared options folded in. */
+export function trackersOf(doc: BlockDocument): BlockConfig[] {
+  if (!doc.group) return [doc.shared];
+  return doc.group.map((entry) => ({ ...doc.shared, ...entry }));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readConfig(raw: Record<string, unknown>): BlockConfig {
@@ -182,11 +217,12 @@ export const MIN_SIZE = 20;
 export const MAX_SIZE = 44;
 export const MAX_COLUMNS = 60;
 export const MAX_ROWS = 40;
+export const MAX_GROUP = 12;
 
 export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): ResolvedConfig {
   const mode = block.mode ?? settings.mode;
   const calendar = block.calendar ?? settings.calendar;
-  const locale = block.locale ?? settings.locale;
+  const locale = displayLocale(calendar, block.locale ?? settings.locale);
   const weekStartSetting = block.weekStart ?? settings.weekStart;
 
   const rows = (block.rows ?? []).map((row) => row.trim()).filter(Boolean).slice(0, MAX_ROWS);
@@ -215,6 +251,15 @@ export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): R
     rows: mode === "grid" && rows.length === 0 ? [""] : rows,
     columns: resolveColumns(block.columns, mode),
   };
+}
+
+/* Choosing the Persian calendar and being handed "Shahrivar 1405 AP" is not
+   what anybody meant by it, and neither is a Jalali month that starts its
+   weeks on Sunday. With no language asked for, the calendar names itself and
+   the week follows; an explicit locale still wins over both. */
+function displayLocale(calendar: CalendarSystem, locale: string): string {
+  if (locale.trim()) return locale.trim();
+  return calendar === "persian" ? "fa" : "";
 }
 
 function resolveColumns(columns: BlockConfig["columns"], mode: Mode): ColumnPlan {
@@ -258,6 +303,10 @@ const KEY_ORDER: Array<keyof BlockConfig> = [
 ];
 
 export function serializeConfig(config: BlockConfig): string {
+  return stringifyYaml(orderKeys(config)).trimEnd();
+}
+
+function orderKeys(config: BlockConfig): Record<string, unknown> {
   const ordered: Record<string, unknown> = {};
   for (const key of KEY_ORDER) {
     const value = config[key];
@@ -265,11 +314,18 @@ export function serializeConfig(config: BlockConfig): string {
     if (Array.isArray(value) && value.length === 0) continue;
     ordered[key] = value;
   }
-  return stringifyYaml(ordered).trimEnd();
+  return ordered;
 }
 
-export function toCodeBlock(config: BlockConfig): string {
-  return "```" + BLOCK_LANGUAGE + "\n" + serializeConfig(config) + "\n```";
+export function serializeBlock(doc: BlockDocument): string {
+  if (!doc.group) return serializeConfig(doc.shared);
+  const body = orderKeys(doc.shared);
+  body.trackers = doc.group.map(orderKeys);
+  return stringifyYaml(body).trimEnd();
+}
+
+export function toCodeBlock(doc: BlockDocument): string {
+  return "```" + BLOCK_LANGUAGE + "\n" + serializeBlock(doc) + "\n```";
 }
 
 /** Drops anything matching the vault default, so blocks stay short. */
@@ -308,6 +364,51 @@ export function pruneToDefaults(
   }
   if (pruned.month === "current") delete pruned.month;
   return pruned;
+}
+
+/* Writing a group back: anything an entry says that the group already says
+   is dropped, so the block keeps stating each choice once and in the place
+   it applies. Order is the list's order, which is what dragging changes. */
+export function buildGroup(
+  trackers: BlockConfig[],
+  settings: HabbiterSettings,
+): BlockDocument {
+  if (trackers.length === 1) {
+    return { shared: pruneToDefaults(trackers[0], settings), group: null };
+  }
+
+  const shared: BlockConfig = {};
+  for (const key of SHAREABLE) {
+    const first = trackers[0]?.[key];
+    if (first === undefined) continue;
+    if (trackers.every((t) => sameValue(t[key], first))) {
+      (shared as Record<string, unknown>)[key] = first;
+    }
+  }
+
+  const group = trackers.map((tracker) => {
+    const entry: BlockConfig = {};
+    for (const key of KEY_ORDER) {
+      const value = tracker[key];
+      if (value === undefined) continue;
+      if (key !== "id" && sameValue(shared[key], value)) continue;
+      (entry as Record<string, unknown>)[key] = value;
+    }
+    return entry;
+  });
+
+  return { shared: pruneToDefaults(shared, settings), group };
+}
+
+/* id and title are a tracker's own by definition; everything else can be
+   said once for the whole row. */
+const SHAREABLE: Array<keyof BlockConfig> = KEY_ORDER.filter(
+  (key) => key !== "id" && key !== "title",
+);
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) || Array.isArray(b)) return JSON.stringify(a) === JSON.stringify(b);
+  return a === b;
 }
 
 export function newTrackerId(): string {

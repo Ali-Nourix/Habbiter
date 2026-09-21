@@ -37,8 +37,20 @@ export interface TrackerDeps {
   /** Absent when the block cannot be located in a file — preview, export. */
   writeBlock?: (next: BlockConfig) => Promise<boolean>;
   openBuilder?: () => void;
+  /** Adds another tracker to this block, beside this one. */
+  addBeside?: () => void;
+  /** Drops this tracker from the block. The ticks outlive it, under its id. */
+  removeFromGroup?: () => void;
   /** Set when the block has no id, so ticks are going nowhere durable. */
   unanchored?: boolean;
+  /** Present only for a tracker standing in a row with others. */
+  group?: GroupHandle;
+}
+
+export interface GroupHandle {
+  grab: (event: PointerEvent) => void;
+  move: (by: number) => void;
+  position: () => { index: number; count: number };
 }
 
 interface Column {
@@ -98,6 +110,7 @@ export class TrackerView extends MarkdownRenderChild {
     el.toggleClass("is-controls-visible", this.config.alwaysShowControls);
     el.dataset.mode = this.config.mode;
     el.dataset.cell = this.config.cell;
+    el.toggleClass("is-in-row", Boolean(this.deps.group));
     /* Not --hb-cell directly: a coarse pointer raises the floor on this, and
        a value written into the style attribute would outrank that. */
     el.style.setProperty("--hb-size", `${this.config.size}px`);
@@ -155,14 +168,27 @@ export class TrackerView extends MarkdownRenderChild {
     const showsMonth = config.columns.kind === "days";
     const head = parent.createDiv({ cls: "hb-head" });
 
-    if (config.title) head.createDiv({ cls: "hb-title", text: config.title });
+    if (config.title) {
+      head.createDiv({ cls: "hb-title", text: config.title });
+      /* A flex line break. In a row the header has to fold the same way for
+         every tracker or their grids start at different heights, and where
+         it folds cannot be left to how long somebody's title happens to be.
+         CSS hides it everywhere else. */
+      head.createDiv({ cls: "hb-break" });
+    }
 
     if (showsMonth) {
       head.createDiv({
         /* With no title of its own the month is the tracker's name, so it
            takes the title's weight rather than sitting there as a caption. */
         cls: config.title ? "hb-month" : "hb-month is-lead",
-        text: monthTitle(anchor, config.calendar, config.locale, config.numerals),
+        text: monthTitle(
+          anchor,
+          config.calendar,
+          config.locale,
+          config.numerals,
+          Boolean(this.deps.group),
+        ),
       });
     }
 
@@ -174,6 +200,7 @@ export class TrackerView extends MarkdownRenderChild {
     }
 
     const tools = head.createDiv({ cls: "hb-tools" });
+    if (this.deps.group) this.addGrip(tools);
     if (showsMonth) {
       this.addTool(tools, "chevron-left", "Previous month", () => this.stepMonth(-1), true);
       if (this.monthOffset !== 0) {
@@ -229,6 +256,28 @@ export class TrackerView extends MarkdownRenderChild {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       onClick(event);
+    });
+  }
+
+  /* The grip is a button, not a bare handle: it has to be reachable and
+     labelled even though what it is for — dragging — is not. The same move
+     is in the menu for everyone who cannot drag. */
+  private addGrip(parent: HTMLElement): void {
+    const group = this.deps.group;
+    if (!group) return;
+
+    const button = parent.createEl("button", {
+      cls: "hb-tool hb-grip",
+      attr: { type: "button", "aria-label": "Drag to reorder" },
+    });
+    setIcon(button, "grip-vertical");
+    setTooltip(button, "Drag to reorder", { placement: "top" });
+    button.addEventListener("pointerdown", (event) => group.grab(event));
+    button.addEventListener("keydown", (event) => {
+      const by = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+      if (!by) return;
+      event.preventDefault();
+      group.move(by);
     });
   }
 
@@ -560,6 +609,24 @@ export class TrackerView extends MarkdownRenderChild {
       );
     }
 
+    if (this.deps.addBeside) {
+      menu.addItem((item) =>
+        item
+          .setTitle("Add one beside this…")
+          .setIcon("columns-2")
+          .onClick(() => this.deps.addBeside?.()),
+      );
+    }
+
+    if (this.deps.group && this.deps.removeFromGroup) {
+      menu.addItem((item) =>
+        item
+          .setTitle("Take out of the row")
+          .setIcon("trash-2")
+          .onClick(() => this.deps.removeFromGroup?.()),
+      );
+    }
+
     if (config.columns.kind === "days" && this.deps.writeBlock) {
       const pinned = config.month !== "current";
       const civil = civilOf(anchor, config.calendar);
@@ -575,6 +642,41 @@ export class TrackerView extends MarkdownRenderChild {
             });
           }),
       );
+    }
+
+    if (config.columns.kind === "days" && this.deps.writeBlock) {
+      const toPersian = config.calendar !== "persian";
+      menu.addItem((item) =>
+        item
+          .setTitle(toPersian ? "Show in the Persian calendar" : "Show in the Gregorian calendar")
+          .setIcon("calendar")
+          .onClick(() => {
+            void this.deps.writeBlock?.({
+              ...this.deps.block,
+              calendar: toPersian ? "persian" : "gregorian",
+              /* The week starts on a different day in each, and the month
+                 names come from a different language. Both are handed back
+                 to the calendar unless this tracker asked for its own. */
+              weekStart: "auto",
+            });
+          }),
+      );
+    }
+
+    const group = this.deps.group;
+    if (group) {
+      const { index, count } = group.position();
+      menu.addSeparator();
+      if (index > 0) {
+        menu.addItem((item) =>
+          item.setTitle("Move earlier").setIcon("arrow-left").onClick(() => group.move(-1)),
+        );
+      }
+      if (index < count - 1) {
+        menu.addItem((item) =>
+          item.setTitle("Move later").setIcon("arrow-right").onClick(() => group.move(1)),
+        );
+      }
     }
 
     menu.addSeparator();

@@ -196,7 +196,12 @@ Pushing the tag runs `.github/workflows/release.yml`, which refuses to build
 if the tag and `manifest.json` disagree, then attaches `main.js`,
 `manifest.json` and `styles.css` to a **draft** release. Publishing it is a
 separate click, because publishing is a decision rather than a side effect of
-pushing a tag.
+asking for a build.
+
+The same workflow can also be started from the Actions tab with a version,
+and will mint the tag itself from the branch it was run on — the path for
+anywhere a tag cannot be pushed by hand. It refuses a version the manifest
+does not claim, and refuses to reuse a tag that already exists.
 
 `.github/workflows/ci.yml` runs on every push: typecheck, tests, bundle, and
 a check that the committed `main.js` is the one the source builds.

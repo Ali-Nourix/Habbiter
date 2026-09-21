@@ -1,0 +1,80 @@
+/* Preview harness only — Obsidian's own variable defaults, so the plugin is
+   exercised on a bare install as well as under a theme. Nothing here ships.
+
+   The variables are declared inside :where() so they carry no specificity at
+   all: a theme.css dropped in beside this file wins every one of them, which
+   is the whole point of being able to drop one in. */
+
+:where(body) {
+  --font-interface: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-ui-smaller: 12px;
+  --font-ui-small: 13px;
+  --font-semibold: 600;
+  --radius-s: 4px;
+  --radius-l: 8px;
+  --checkbox-radius: 4px;
+  --icon-size: 18px;
+
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-interface);
+  color: var(--text-normal);
+}
+
+/* A tracker lives on a note, and a note is --background-primary. Painting
+   the harness body instead would put it on whatever the theme gives the app
+   shell, and the sticky row labels would sit on the wrong colour. */
+#samples {
+  padding: 40px;
+  min-height: 100vh;
+  background-color: var(--background-primary);
+}
+
+:where(body.theme-light) {
+  --background-primary: #ffffff;
+  --background-modifier-border: #e0e0e0;
+  --background-modifier-border-hover: #c9c9c9;
+  --background-modifier-hover: rgba(0, 0, 0, 0.055);
+  --interactive-accent: #7c3aed;
+  --interactive-accent-hover: #6d28d9;
+  --text-on-accent: #ffffff;
+  --text-normal: #222222;
+  --text-muted: #5c5c5c;
+  --text-faint: #999999;
+  --text-error: #b00020;
+}
+
+:where(body.theme-dark) {
+  --background-primary: #1e1e1e;
+  --background-modifier-border: #3f3f3f;
+  --background-modifier-border-hover: #555555;
+  --background-modifier-hover: rgba(255, 255, 255, 0.075);
+  --interactive-accent: #8b5cf6;
+  --interactive-accent-hover: #a78bfa;
+  --text-on-accent: #ffffff;
+  --text-normal: #dadada;
+  --text-muted: #a0a0a0;
+  --text-faint: #6e6e6e;
+  --text-error: #ff6b6b;
+}
+
+svg.svg-icon {
+  display: block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.sample {
+  max-width: 720px;
+  margin-block-end: 44px;
+}
+
+.sample-caption {
+  margin-block-end: 10px;
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

@@ -175,12 +175,15 @@ export function monthTitle(
   system: CalendarSystem,
   locale: string,
   numerals: Numerals,
+  /* Short where the tracker is one of a row: "Sep 2026" leaves room for the
+     controls on a widget the width of its own grid. */
+  short = false,
 ): string {
   return dateFormatter(resolveLocale(locale), {
     calendar: intlCalendar(system),
     numberingSystem: numerals === "latin" ? "latn" : undefined,
     year: "numeric",
-    month: "long",
+    month: short ? "short" : "long",
   }).format(date);
 }
 

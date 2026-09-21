@@ -6,8 +6,13 @@
 # with a version, and it mints the tag itself from the branch it was started
 # on, which is the path for anywhere a tag cannot be pushed by hand.
 #
-# Either way what comes out is a draft. Publishing is a decision, not a side
-# effect of asking for a build.
+# What comes out is a published release. A draft keeps its files to itself —
+# they are not on the tag and nobody can download them — which defeats the
+# point of building them.
+#
+# Re-running a version whose release is still unpublished finishes it rather
+# than failing: that is the case where the files exist but nobody can reach
+# them. A version that is already published is left alone.
 
 name: Release
 
@@ -60,14 +65,6 @@ jobs:
           }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Refuse to reuse a tag
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.version }}" >/dev/null; then
-            echo "::error::tag ${{ steps.version.outputs.version }} already exists"
-            exit 1
-          fi
-
       - run: npm ci
 
       - name: Typecheck, test and bundle
@@ -85,18 +82,72 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "tag $VERSION already exists, leaving it where it points"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "Habbiter $VERSION"
           git push origin "refs/tags/$VERSION"
 
-      - name: Draft the release
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          WANTED: main.js,manifest.json,styles.css
+        run: |
+          set -euo pipefail
+
+          # An unpublished release for this version is wreckage from a run
+          # that stopped short. It holds the same tag as the real one and
+          # shadows it in every lookup, so it goes first.
+          gh api "repos/$GITHUB_REPOSITORY/releases" \
+            --jq ".[] | select(.draft and .tag_name == \"$VERSION\") | .id" \
+          | while read -r id; do
+              echo "deleting unpublished release $id"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            done
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            have=$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')
+            out=$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')
+            full=$(gh release view "$VERSION" --json isPrerelease -q '.isPrerelease | not')
+            # Out already, a full release, and carrying its files: that is a
+            # shipped release and not something to overwrite. Anything short
+            # of all three did not finish, and finishing it is the job.
+            if [ "$out" = "true" ] && [ "$full" = "true" ] && [ "$have" = "$WANTED" ]; then
+              echo "::error::$VERSION is already out with its files. Bump the version."
+              exit 1
+            fi
+            echo "completing $VERSION (published=$out, full=$full, files=[$have])"
+            gh release upload "$VERSION" main.js manifest.json styles.css --clobber
+            # Two calls, not one: --latest is refused while the release is
+            # still marked draft or prerelease, so those come off first.
+            gh release edit "$VERSION" --draft=false --prerelease=false
+            gh release edit "$VERSION" --latest
+          else
+            gh release create "$VERSION" \
+              --title "$VERSION" \
+              --latest \
+              --generate-notes \
+              main.js manifest.json styles.css
+          fi
+
+      - name: The files are on the tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "$VERSION" \
-            --title "$VERSION" \
-            --draft \
-            --generate-notes \
-            main.js manifest.json styles.css
+          set -euo pipefail
+          gh release view "$VERSION" --json isDraft,isPrerelease,url,assets \
+            -q '"published: " + (.isDraft | not | tostring),
+                "prerelease: " + (.isPrerelease | tostring),
+                "url: " + .url,
+                (.assets[] | "  " + .name + "  " + (.size | tostring) + " bytes")'
+
+          # A green run that shipped nothing is the failure this whole file
+          # exists to avoid, so it is asserted rather than eyeballed.
+          [ "$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')" = "true" ]
+          [ "$(gh release view "$VERSION" --json isPrerelease -q '.isPrerelease')" = "false" ]
+          [ "$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')" = "main.js,manifest.json,styles.css" ]

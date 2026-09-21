@@ -20,16 +20,13 @@ import {
   toCodeBlock,
   trackersOf,
 } from "./config";
+import { fenceLines, findFence } from "./fence";
+import type { FenceMatch } from "./fence";
 import type { BlockConfig, BlockDocument } from "./config";
 import { TrackerBlock } from "./block";
 import { HabbiterSettingTab } from "./settings-tab";
 import { Store } from "./store";
 import { StoreValues } from "./values";
-
-/* An opening fence may carry extra backticks and trailing text; a closing
-   one is backticks and nothing else. */
-const OPENING_FENCE = new RegExp(`^\\s*\`{3,}\\s*${BLOCK_LANGUAGE}\\s*$`);
-const CLOSING_FENCE = /^\s*`{3,}\s*$/;
 
 interface MountedBlock {
   child: TrackerBlock;
@@ -114,11 +111,14 @@ export default class HabbiterPlugin extends Plugin {
 
     /* Writing the ids back re-renders the block, which is when it gets drawn
        for real — so there is nothing to do here but wait for it. */
-    if (await this.claimIds(doc, el, ctx)) return;
+    if (await this.claimIds(doc, source, el, ctx)) return;
 
+    /* Every write after this one finds the fence by an id, which is exact.
+       The claim above is the only one that has to go on content. */
+    const anchorId = trackersOf(doc).find((tracker) => tracker.id)?.id;
     const handle: BlockHandle = {
       doc,
-      write: (next) => this.writeBlock(el, ctx, next),
+      write: (next) => this.writeBlock(el, ctx, next, { id: anchorId, source }),
     };
     const anchored = trackersOf(doc).map((tracker, index) => ({
       tracker,
@@ -184,6 +184,7 @@ export default class HabbiterPlugin extends Plugin {
   /** True when ids were written and a re-render is on its way. */
   private async claimIds(
     doc: BlockDocument,
+    source: string,
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
   ): Promise<boolean> {
@@ -199,7 +200,11 @@ export default class HabbiterPlugin extends Plugin {
 
     try {
       const named = trackers.map((tracker) => ({ ...tracker, id: tracker.id ?? newTrackerId() }));
-      return await this.writeBlock(el, ctx, buildGroup(named, this.store.settings));
+      const anchor = trackers.find((tracker) => tracker.id)?.id;
+      return await this.writeBlock(el, ctx, buildGroup(named, this.store.settings), {
+        id: anchor,
+        source,
+      });
     } finally {
       this.claiming.delete(claim);
     }
@@ -209,6 +214,7 @@ export default class HabbiterPlugin extends Plugin {
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
     next: BlockDocument,
+    match: FenceMatch,
   ): Promise<boolean> {
     const info = ctx.getSectionInfo(el);
     const file = this.app.vault.getFileByPath(ctx.sourcePath);
@@ -217,15 +223,19 @@ export default class HabbiterPlugin extends Plugin {
     let written = false;
     await this.app.vault.process(file, (data) => {
       const lines = data.split("\n");
-      /* The section info was read before this callback was queued, so the
-         file may have moved underneath it — and what these line numbers
-         point at is about to be replaced wholesale. Refusing to write
-         unless it is still a habbiter fence, opening and closing, beats
-         writing a tracker over whatever is standing there now. */
-      if (!OPENING_FENCE.test(lines[info.lineStart] ?? "")) return data;
-      if (!CLOSING_FENCE.test(lines[info.lineEnd] ?? "")) return data;
+      /* Inside a callout the section is the callout, so these line numbers
+         are its bounds and not the fence's. The fence is found within them
+         — and if it is no longer there, because the file moved between the
+         section info being read and this callback running, nothing is
+         written. Refusing beats replacing whatever is standing there now. */
+      const span = findFence(lines, info.lineStart, info.lineEnd, match);
+      if (!span) return data;
 
-      lines.splice(info.lineStart, info.lineEnd - info.lineStart + 1, toCodeBlock(next));
+      lines.splice(
+        span.start,
+        span.end - span.start + 1,
+        ...fenceLines(serializeBlock(next), span.prefix),
+      );
       written = true;
       return lines.join("\n");
     });

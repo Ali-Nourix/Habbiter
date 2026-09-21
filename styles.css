@@ -443,9 +443,19 @@
 
 .hb-pair {
   display: flex;
-  align-items: flex-start;
+  /* Baselines, not box tops. A 13px title and a 16px paragraph have line
+     boxes of different heights, so aligning their tops leaves the tracker
+     reading low against the text beside it; aligning the first baselines is
+     what makes the two look like they start on the same line. */
+  align-items: baseline;
   gap: var(--bc-gap-5, 16px) var(--bc-gap-6, 24px);
   flex-wrap: wrap;
+}
+
+/* A tracker on its own has air above it. One set beside a paragraph starts
+   where the paragraph starts, and that margin is 8px of the drift. */
+.hb-pair .hb-root {
+  margin-block-start: 0;
 }
 
 .hb-block[data-side="end"] .hb-pair {

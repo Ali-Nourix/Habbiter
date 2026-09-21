@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = mkdtempSync(join(tmpdir(), "habbiter-test-"));
-const suites = ["calendar.test.ts", "config.test.ts"];
+const suites = ["calendar.test.ts", "config.test.ts", "fence.test.ts"];
 
 let failed = false;
 for (const suite of suites) {

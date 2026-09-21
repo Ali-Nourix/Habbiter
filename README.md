@@ -180,6 +180,27 @@ format, which is written back into somebody's note.
 `obsidian` module, so a change to the renderer or the stylesheet can be
 checked in both themes without a vault. See `preview/README.md`.
 
+## Releasing
+
+Obsidian looks a plugin's version up by its release tag, so the tag *is* the
+version and carries no `v`:
+
+```sh
+# bump manifest.json, package.json and versions.json together, then
+npm run build && git commit -am "1.0.1"
+git tag -a 1.0.1 -m "Habbiter 1.0.1"
+git push origin main 1.0.1
+```
+
+Pushing the tag runs `.github/workflows/release.yml`, which refuses to build
+if the tag and `manifest.json` disagree, then attaches `main.js`,
+`manifest.json` and `styles.css` to a **draft** release. Publishing it is a
+separate click, because publishing is a decision rather than a side effect of
+pushing a tag.
+
+`.github/workflows/ci.yml` runs on every push: typecheck, tests, bundle, and
+a check that the committed `main.js` is the one the source builds.
+
 ## License
 
 MIT.

@@ -65,6 +65,7 @@ Everything is optional except `id`. Anything left out follows
 | `numerals` | `locale` or `latin`. |
 | `dayNumbers`, `weekdays`, `totals`, `streak` | What the tracker shows. |
 | `size` | The side of a cell in pixels, 20 to 44. |
+| `wrap` | `none` for a band of its own, or `start` / `end` to let text run beside it. `left` and `right` are accepted and mean the same. |
 | `trackers` | A list, to put several in one block. See below. |
 
 A grid of four habits across the month:
@@ -96,6 +97,41 @@ rows: [Push-ups, Squats, Plank]
 columns: [Mon, Tue, Wed, Thu, Fri]
 ```
 ````
+
+## Writing beside one
+
+By default a tracker takes a band across the note. Floated, it is only as
+wide and as tall as its own grid, and the text after it runs alongside:
+
+````markdown
+```habbiter
+id: hb-n3f8
+title: Meditate
+wrap: start
+size: 22
+```
+Anything written after the block flows up the side of it and closes
+underneath, the way text flows past a figure.
+````
+
+`wrap: start` puts the tracker where the line starts — the left in English,
+the right in Persian — and `wrap: end` puts it at the other side. A heading
+or a horizontal rule after it starts a fresh band, so a floated tracker
+never runs into the next section.
+
+Hover a tracker and **drag it by the grip** to place it: the outer thirds of
+the text column float it to that side, the middle gives it a band of its
+own, and Escape abandons the move. The same three are in **⋯**, and on the
+grip itself with ← and →.
+
+**What is still not on offer:** dropping a tracker at arbitrary x and y. It
+could be done — the block could carry an offset and the tracker could be
+shifted by it — but the offset would be measured against a column width that
+is different on your phone, in an export and in someone else's window, so it
+would land somewhere else every time. What a document can say durably is
+*which side*, so that is what is stored. For genuinely free positioning,
+Obsidian's canvas is the place, and a tracker works in a canvas card like
+anything else.
 
 ## Several side by side
 

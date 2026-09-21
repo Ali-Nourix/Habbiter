@@ -75,6 +75,26 @@ const monthly = pruneToDefaults(
 );
 ok("month mode drops grid keys", !("rows" in monthly) && !("columns" in monthly));
 
+/* --- Placement ----------------------------------------------------------
+   "left" and "right" are what people type; a tracker in a Persian note
+   belongs at the start of the line, which is the right one. */
+
+check("left means the start of the line", parseBlock("wrap: left").doc.shared.wrap, "start");
+check("right means the end of it", parseBlock("wrap: RIGHT").doc.shared.wrap, "end");
+check("float is the same key", parseBlock("float: start").doc.shared.wrap, "start");
+check("none is a band of its own", parseBlock("wrap: none").doc.shared.wrap, "none");
+check("nonsense is ignored", parseBlock("wrap: sideways").doc.shared.wrap, undefined);
+check(
+  "a placement survives the round trip",
+  parseBlock(
+    toCodeBlock({ shared: pruneToDefaults({ id: "w", wrap: "end" }, DEFAULT_SETTINGS), group: null })
+      .split("\n")
+      .slice(1, -1)
+      .join("\n"),
+  ).doc.shared.wrap,
+  "end",
+);
+
 /* --- Calendars ----------------------------------------------------------
    Picking the Persian calendar and being handed "Shahrivar 1405 AP" on a
    week that starts on Sunday is not what anybody meant by picking it. */

@@ -17,6 +17,8 @@ export const BLOCK_LANGUAGE = "habbiter";
 
 export type Mode = "month" | "grid";
 export type CellKind = "check" | "count";
+/** Where a tracker sits in the text: in the flow, or with text beside it. */
+export type Wrap = "none" | "start" | "end";
 
 export interface BlockConfig {
   id?: string;
@@ -35,6 +37,7 @@ export interface BlockConfig {
   totals?: boolean;
   streak?: boolean;
   size?: number;
+  wrap?: Wrap;
   rows?: string[];
   columns?: string[] | number | "days";
 }
@@ -70,6 +73,7 @@ export interface ResolvedConfig {
   totals: boolean;
   streak: boolean;
   size: number;
+  wrap: Wrap;
   round: boolean;
   alwaysShowControls: boolean;
   rows: string[];
@@ -161,6 +165,9 @@ function readConfig(raw: Record<string, unknown>): BlockConfig {
   const size = asNumber(raw.size);
   if (size !== undefined) config.size = clamp(Math.round(size), MIN_SIZE, MAX_SIZE);
 
+  const wrap = readWrap(raw.wrap ?? raw.float ?? raw.align);
+  if (wrap) config.wrap = wrap;
+
   const flags: Array<[keyof BlockConfig, unknown]> = [
     ["dayNumbers", raw.dayNumbers ?? raw.days ?? raw["day-numbers"]],
     ["weekdays", raw.weekdays],
@@ -196,6 +203,18 @@ function readColumns(value: unknown): BlockConfig["columns"] {
   }
   const labels = asStringList(value);
   return labels && labels.length ? labels : undefined;
+}
+
+/* "left" and "right" are what people reach for, but a tracker in a Persian
+   note should sit at the start of the line, which is the right one. The
+   physical names are taken and mapped for a left-to-right reader. */
+function readWrap(value: unknown): Wrap | undefined {
+  const text = asString(value)?.trim().toLowerCase();
+  if (!text) return undefined;
+  if (text === "start" || text === "left") return "start";
+  if (text === "end" || text === "right") return "end";
+  if (text === "none" || text === "false" || text === "block") return "none";
+  return undefined;
 }
 
 function readWeekStart(value: unknown): number | "auto" | undefined {
@@ -244,6 +263,7 @@ export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): R
     totals: block.totals ?? settings.totals,
     streak: block.streak ?? settings.streak,
     size: clamp(block.size ?? settings.size, MIN_SIZE, MAX_SIZE),
+    wrap: block.wrap ?? settings.wrap,
     round: settings.round,
     alwaysShowControls: settings.alwaysShowControls,
     /* A grid with no rows would draw nothing at all, which reads as a broken
@@ -300,6 +320,7 @@ const KEY_ORDER: Array<keyof BlockConfig> = [
   "totals",
   "streak",
   "size",
+  "wrap",
 ];
 
 export function serializeConfig(config: BlockConfig): string {
@@ -352,6 +373,7 @@ export function pruneToDefaults(
     "totals",
     "streak",
     "size",
+    "wrap",
   ] as const;
 
   for (const key of sharedKeys) {

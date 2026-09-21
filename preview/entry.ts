@@ -10,9 +10,19 @@ import { TrackerView } from "../src/tracker";
 import { MemoryValues } from "../src/values";
 import { addDays, isoKey, monthLength, startOfMonth, today } from "../src/calendar";
 
+const PROSE =
+  "Habits are not a matter of memory. The point of writing one down beside " +
+  "the day it belongs to is that the page, not you, does the remembering — " +
+  "and that a month of them reads as a shape rather than a list. Text set " +
+  "next to a tracker should flow past it the way it flows past a figure, " +
+  "closing under it and carrying on, without the tracker taking a band of " +
+  "the page it does not need. This paragraph is here to prove it does.";
+
 interface Sample {
   caption: string;
   block?: BlockConfig;
+  /** Prose after the tracker, to show what a float actually does to it. */
+  prose?: boolean;
   /** A row of trackers in one block, the way a group renders. */
   row?: BlockConfig[];
   rtl?: boolean;
@@ -43,6 +53,21 @@ const SAMPLES: Sample[] = [
       totals: true,
       streak: true,
     },
+  },
+  {
+    caption: "Floated to the start — text runs beside it",
+    block: { id: "w1", title: "Meditate", size: 22, wrap: "start" },
+    prose: true,
+  },
+  {
+    caption: "Floated to the end",
+    block: { id: "w2", title: "Read", size: 22, wrap: "end" },
+    prose: true,
+  },
+  {
+    caption: "A band of its own, the default",
+    block: { id: "w3", title: "Walk", size: 22 },
+    prose: true,
   },
   {
     caption: "A row of them in one block — drag by the grip to reorder",
@@ -123,6 +148,8 @@ for (const sample of SAMPLES) {
       mount(row.createDiv({ cls: "hb-slot" }).createDiv(), block, true);
     }
   } else if (sample.block) {
-    mount(host, sample.block);
+    mount(host.createDiv(), sample.block);
   }
+
+  if (sample.prose) host.createEl("p", { cls: "sample-prose", text: PROSE });
 }

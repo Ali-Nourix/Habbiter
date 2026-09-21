@@ -433,6 +433,58 @@
   box-shadow: inset 0 0 0 1px var(--hb-accent);
 }
 
+/* --- Where it sits in the text -------------------------------------------
+   A tracker is normally a band across the note. Floated, it is only as wide
+   and as tall as itself and the paragraphs after it run alongside — which is
+   the point: the box should be the size of the calendar, not of the page.
+
+   Floated in both reading view and the editor. Obsidian's own snippets float
+   images and callouts in Live Preview, so a floated block widget is a road
+   already travelled; if it ever misbehaves there, `wrap: none` is one menu
+   item away and the tracker goes back to a band. */
+
+.hb-root[data-wrap="start"],
+.hb-root[data-wrap="end"] {
+  margin-block: 0 var(--hb-gap-wide);
+  /* Text should not touch it. The block edge already has the note's own
+     margin, so only the side the words come from needs clearing. */
+  max-inline-size: 100%;
+}
+
+.hb-root[data-wrap="start"] {
+  float: inline-start;
+  margin-inline-end: var(--bc-gap-5, 16px);
+}
+
+.hb-root[data-wrap="end"] {
+  float: inline-end;
+  margin-inline-start: var(--bc-gap-5, 16px);
+}
+
+/* A paragraph beside a tracker is the point; a heading beside one is not.
+   A heading or a rule after a floated tracker starts its own band, which is
+   what those elements are for. Anything else keeps flowing past. */
+.hb-root[data-wrap="start"] ~ :is(h1, h2, h3, h4, h5, h6, hr),
+.hb-root[data-wrap="end"] ~ :is(h1, h2, h3, h4, h5, h6, hr) {
+  clear: both;
+}
+
+/* While a placement is being chosen the tracker shows where it would land,
+   and says it is a preview rather than the answer. */
+.hb-root.is-placing {
+  opacity: 0.7;
+  outline: 1px dashed var(--hb-accent);
+  outline-offset: var(--hb-gap);
+}
+
+/* A floated tracker in a row of them would fight the row for the same
+   space; inside a group the placement is the row's, not each tracker's. */
+.hb-group .hb-root[data-wrap="start"],
+.hb-group .hb-root[data-wrap="end"] {
+  float: none;
+  margin-inline: 0;
+}
+
 /* --- A row of them --------------------------------------------------------
    Several trackers in one block. They wrap to whatever width the note gives
    them rather than being placed: a markdown file has nowhere to record that
@@ -457,10 +509,11 @@
 }
 
 /* A widget should be as wide as the thing it shows, not as wide as the words
-   above it. Zero width with a 100% floor keeps the header out of the root's
-   intrinsic size — so the grid decides how wide a tracker is — and then lets
-   the header fill and wrap inside whatever that turns out to be. */
-.hb-root.is-in-row .hb-head {
+   above it — and one with text running past it has to be, or the text has
+   nowhere to run. Zero width with a 100% floor keeps the header out of the
+   root's intrinsic size, so the grid decides how wide a tracker is, and then
+   lets the header fill and wrap inside whatever that turns out to be. */
+.hb-root.is-compact .hb-head {
   flex-wrap: wrap;
   row-gap: var(--hb-gap);
   inline-size: 0;
@@ -473,13 +526,13 @@
 
 /* Title on one line, the month and its count on the next, always — see the
    comment on .hb-break. */
-.hb-root.is-in-row .hb-break {
+.hb-root.is-compact .hb-break {
   display: block;
   flex-basis: 100%;
   block-size: 0;
 }
 
-.hb-root.is-in-row .hb-title {
+.hb-root.is-compact .hb-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -489,7 +542,7 @@
   padding-inline-end: calc(4 * var(--hb-hit));
 }
 
-.hb-root.is-in-row .hb-stats {
+.hb-root.is-compact .hb-stats {
   margin-inline-start: 0;
 }
 
@@ -497,7 +550,7 @@
    as wide as its own grid, and reserving that much for something invisible
    is worse than letting it sit over the title for as long as a pointer is
    on it. The page colour behind them is what keeps them readable there. */
-.hb-root.is-in-row {
+.hb-root.is-compact {
   position: relative;
   /* A widget is as wide as its own grid, and four full-size buttons would
      leave a habit's name four letters. Still above the 20px a pointer
@@ -505,7 +558,7 @@
   --hb-hit: 24px;
 }
 
-.hb-root.is-in-row .hb-tools {
+.hb-root.is-compact .hb-tools {
   position: absolute;
   inset-block-start: 0;
   inset-inline-end: 0;

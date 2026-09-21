@@ -113,6 +113,23 @@ export class HabbiterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Where a tracker sits")
+      .setDesc(
+        "Floated, a tracker is only as wide as its grid and the text after it " +
+          "runs alongside. A heading starts a fresh band either way.",
+      )
+      .addDropdown((drop) =>
+        drop
+          .addOptions({
+            none: "A band of its own",
+            start: "Text to the side, tracker first",
+            end: "Text to the side, tracker last",
+          })
+          .setValue(this.settings.wrap)
+          .onChange((value) => this.save({ wrap: value as HabbiterSettings["wrap"] })),
+      );
+
+    new Setting(containerEl)
       .setName("Round cells")
       .setDesc("Circles instead of the corner your theme gives a checkbox.")
       .addToggle((toggle) =>

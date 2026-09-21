@@ -67,8 +67,15 @@ svg.svg-icon {
 }
 
 .sample {
+  clear: both;
   max-width: 720px;
   margin-block-end: 44px;
+}
+
+.sample-prose {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .sample-caption {

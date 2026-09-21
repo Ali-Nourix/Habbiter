@@ -248,6 +248,20 @@ export class BuilderModal extends Modal {
     }
 
     new Setting(form)
+      .setName("Where it sits")
+      .setDesc("Floated, the tracker is only as wide as its grid and text runs beside it.")
+      .addDropdown((drop) =>
+        drop
+          .addOptions({
+            none: "A band of its own",
+            start: "Text to the side, tracker first",
+            end: "Text to the side, tracker last",
+          })
+          .setValue(config.wrap)
+          .onChange((value) => this.update({ wrap: value as BlockConfig["wrap"] })),
+      );
+
+    new Setting(form)
       .setName("Totals")
       .addToggle((toggle) =>
         toggle.setValue(config.totals).onChange((value) => this.update({ totals: value })),

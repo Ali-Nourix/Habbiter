@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import type { CalendarSystem, Numerals } from "./calendar";
-import type { CellKind, Mode } from "./config";
+import type { CellKind, Mode, Wrap } from "./config";
 
 export interface HabbiterSettings {
   mode: Mode;
@@ -24,6 +24,8 @@ export interface HabbiterSettings {
   streak: boolean;
   /** The side of a cell in px. The visual mark, not the hit area. */
   size: number;
+  /** Whether text flows beside a tracker or starts below it. */
+  wrap: Wrap;
   /** Round cells instead of following the theme's checkbox corner. */
   round: boolean;
   /** Keep the header controls visible instead of summoning them on hover. */
@@ -43,6 +45,7 @@ export const DEFAULT_SETTINGS: HabbiterSettings = {
   totals: false,
   streak: true,
   size: 26,
+  wrap: "none",
   round: false,
   alwaysShowControls: false,
 };

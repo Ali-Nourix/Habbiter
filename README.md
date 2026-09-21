@@ -58,7 +58,7 @@ Everything is optional except `id`. Anything left out follows
 | `goal` | Counter only: what a full cell means. Clicking cycles up to it and back to zero. |
 | `rows` | Grid only: a list of row names. |
 | `columns` | Grid only: a list of names, a plain number, or `days` for the month. |
-| `band` | Day columns: `week` breaks the month into stacked weeks, `none` runs it flat. |
+| `band` | Day columns: `wrap` runs the month on to the next line, `week` breaks it at the weeks, `none` keeps one scrolling line. |
 | `calendar` | `gregorian` or `persian`. |
 | `month` | `current`, or a year-month in the block's own calendar: `2026-09`. |
 | `weekStart` | `auto`, a weekday name, or `0`–`6` with `0` as Sunday. |
@@ -73,25 +73,27 @@ Everything is optional except `id`. Anything left out follows
 
 A grid with a column per day is 31 wide, which no note is — flat, it ends in
 a horizontal scrollbar, and a scrollbar is where a tracker stops being
-glanced at. So `columns: days` breaks the month into weeks and stacks them:
+glanced at. So the month runs on to the next line instead, taking whatever
+width the note has:
 
 ```
-      S   M   T   W   T   F   S        ← said once, because every week
-                                          starts in the same column
-          1   2   3   4   5
-Meditate  ■   ■   □   ■   □
-Read      □   ■   ■   □   ■
-
-      6   7   8   9  10  11  12
-Meditate  ■   □   ■   □   ■   ■
-Read      ■   ■   □   ■   □   □
-
-Meditate  Total 18   Streak 3
+Meditate   Total 18   Streak 3
+ M  T  W  T  F  S  S  M  T  W  T  F  S  S  M  T  W  T
+ 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18
+ ■  ■  □  ■  □  ■  ■  □  ■  ■  □  ■  □  ■  ■  □  ■  ■
+19 20 21 22 23 24 25 26 27 28 29 30
+ □  ■  ■  □  ■  □  ■  ■  □  ■  ■  □
 ```
 
-The tallies are for the month, so they are written once at the end rather
-than per week. `band: none` runs the month flat again if you would rather
-scroll.
+Each day carries its own date, in the box that wraps with it — a row of
+dates above a row of cells would be two things wrapping separately, and
+they would stop corresponding at the first line break.
+
+`band: week` breaks the month at the weeks instead, which lines the columns
+up down the page and lets the weekday names be written once. It is worth
+having for several habits at once, where the calendar cannot help; for one
+habit it is another way of drawing the calendar. `band: none` keeps the
+single scrolling line.
 
 A grid of four habits across the month:
 

@@ -27,7 +27,7 @@ import {
   today,
   weekdayLabels,
 } from "./calendar";
-import type { BlockConfig, ResolvedConfig } from "./config";
+import type { Band, BlockConfig, ResolvedConfig } from "./config";
 import { MONTH_ROW_KEY } from "./store";
 import type { ValueSource } from "./values";
 
@@ -108,10 +108,10 @@ export class TrackerView extends MarkdownRenderChild {
      widget: as wide as the grid it shows and no wider, or there is nothing
      left for whatever is beside it. One with the block to itself can spread
      its header out along it. */
-  /* Only day columns band: a week is a real thing to break a month into,
-     and columns somebody named themselves have no such seam in them. */
-  private get isBanded(): boolean {
-    return this.config.band === "week" && this.config.columns.kind === "days";
+  /* Only day columns get broken up. Columns somebody named themselves are
+     however many they said, and there is no seam in them to break at. */
+  private get dayLayout(): Band | null {
+    return this.config.columns.kind === "days" ? this.config.band : null;
   }
 
   private get isCompact(): boolean {
@@ -141,7 +141,8 @@ export class TrackerView extends MarkdownRenderChild {
 
     this.renderHead(el, anchor);
     if (this.config.mode === "month") this.renderCalendar(el, anchor);
-    else if (this.isBanded) this.renderBands(el);
+    else if (this.dayLayout === "wrap") this.renderStrip(el);
+    else if (this.dayLayout === "week") this.renderBands(el);
     else this.renderGrid(el);
     if (this.deps.unanchored && this.deps.openBuilder) this.renderUnanchoredNotice(el);
 
@@ -334,6 +335,57 @@ export class TrackerView extends MarkdownRenderChild {
      on the same weekday the columns line up down the page, which is what
      lets the weekday names be stated once at the top instead of crammed
      into each 26px column beside a date. */
+  /* The month as one strip of days that runs on to the next line when it
+     reaches the edge — as many as the note is wide, then the rest below.
+     Breaking at the weeks instead lines the columns up, but a month in
+     seven aligned columns is the calendar, drawn twice.
+
+     Each day carries its own date, in the same box that wraps with it. A
+     row of dates above a row of cells would be two things wrapping
+     separately, and they would stop lining up at the first line break. */
+  private renderStrip(parent: HTMLElement): void {
+    const { config } = this;
+    const named = this.rows.some((row) => row !== "");
+    const stats = this.gridStatColumns();
+    const narrow = config.weekdays
+      ? weekdayLabels(config.locale, config.weekStart, true)
+      : null;
+    const wide = config.weekdays ? weekdayLabels(config.locale, config.weekStart) : null;
+
+    const body = parent.createDiv({ cls: "hb-body is-wrapped" });
+
+    for (const row of this.rows) {
+      if (named || stats.length) {
+        const line = body.createDiv({ cls: "hb-striphead" });
+        if (named) line.createDiv({ cls: "hb-rowhead", text: row });
+        for (const stat of stats) {
+          const box = line.createSpan({ cls: "hb-stat" });
+          box.createSpan({ cls: "hb-stat-name", text: stat.label });
+          const cell: StatCell = {
+            el: box.createSpan({ cls: "hb-stat-value" }),
+            compute: () => stat.of(row),
+          };
+          this.statCells.push(cell);
+          this.paintStat(cell);
+        }
+      }
+
+      const strip = body.createDiv({ cls: "hb-strip" });
+      for (const column of this.columns) {
+        const day = strip.createDiv({ cls: "hb-day" });
+        const cap = day.createDiv({ cls: "hb-daycap" });
+        if (narrow && wide && column.date) {
+          const index = (column.date.getDay() - config.weekStart + DAYS_IN_WEEK) % DAYS_IN_WEEK;
+          const mark = cap.createDiv({ cls: "hb-dayname", text: narrow[index] });
+          mark.setAttribute("aria-label", wide[index]);
+        }
+        const number = cap.createDiv({ cls: "hb-daynum", text: column.label });
+        number.toggleClass("is-today", Boolean(column.date && sameDay(column.date, today())));
+        this.cells.push(this.renderCell(day, row, column, row));
+      }
+    }
+  }
+
   private renderBands(parent: HTMLElement): void {
     const { config } = this;
     const named = this.rows.some((row) => row !== "");
@@ -623,7 +675,7 @@ export class TrackerView extends MarkdownRenderChild {
 
     const rtl = getComputedStyle(this.containerEl).direction === "rtl";
     const forward = rtl ? -1 : 1;
-    const perRow = Math.max(1, this.columnsPerRow);
+    const perRow = Math.max(1, this.cellsPerLine());
 
     const steps: Record<string, number> = {
       ArrowRight: forward,
@@ -655,6 +707,21 @@ export class TrackerView extends MarkdownRenderChild {
     this.values.set(row, column.key, Math.max(0, nudge === null ? 0 : current + nudge));
     this.paintCell(cell, row, column, rowLabel);
     this.repaintStats();
+  }
+
+  /* How many cells share a line. Fixed by the template everywhere except a
+     wrapping strip, where only the layout knows — so it is asked, at the
+     moment an arrow key needs the answer rather than at render. */
+  private cellsPerLine(): number {
+    if (this.dayLayout !== "wrap") return Math.max(1, this.columnsPerRow);
+
+    const first = this.cells.find((cell): cell is HTMLButtonElement => cell !== null);
+    if (!first) return 1;
+    const top = first.getBoundingClientRect().top;
+    const onLine = this.cells.filter(
+      (cell) => cell && Math.abs(cell.getBoundingClientRect().top - top) < 1,
+    ).length;
+    return Math.max(1, onLine);
   }
 
   /** Steps over the blanks a month's first and last weeks leave behind. */

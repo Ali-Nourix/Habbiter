@@ -43,7 +43,7 @@ const SAMPLES: Sample[] = [
     rtl: true,
   },
   {
-    caption: "Grid, Persian month — broken into weeks, no scrollbar",
+    caption: "Grid, Persian month — one strip that runs on to the next line",
     block: {
       id: "b1",
       title: "عادت‌های ماه",
@@ -58,7 +58,7 @@ const SAMPLES: Sample[] = [
     rtl: true,
   },
   {
-    caption: "Grid — one habit, broken into weeks",
+    caption: "Grid — one habit, the month as a wrapping strip",
     block: { id: "b2", title: "Meditate", mode: "grid", rows: [""], columns: "days", totals: true },
   },
   {

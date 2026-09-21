@@ -293,6 +293,82 @@
   block-size: var(--hb-cell);
 }
 
+/* --- A month that runs on to the next line ------------------------------
+   One strip of days, as many as the note is wide, then the rest below. No
+   scrollbar, and no seven-column grid either — a month in seven aligned
+   columns is the calendar, and this is meant to be the other thing.
+
+   Each day carries its own date in the box that wraps with it. A row of
+   dates above a row of cells would be two things wrapping separately, and
+   they would stop corresponding at the first line break. */
+
+.hb-body.is-wrapped {
+  overflow-x: visible;
+}
+
+.hb-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-gap-wide) var(--hb-gap);
+  align-items: flex-start;
+}
+
+.hb-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* Never narrower than its own cell, and free to be wider when the date
+     above it is — which is what keeps the boxes evenly spaced whatever the
+     numerals are doing. */
+  min-inline-size: var(--hb-cell);
+}
+
+.hb-daycap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.hb-dayname,
+.hb-daynum {
+  font-size: clamp(10px, calc(var(--hb-cell) * 0.38), 12px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hb-dayname {
+  color: var(--hb-muted);
+  font-size: clamp(9px, calc(var(--hb-cell) * 0.32), 11px);
+}
+
+.hb-daynum {
+  color: var(--hb-muted);
+}
+
+.hb-daynum.is-today {
+  color: var(--hb-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+/* The habit's name and its tallies on one line above its strip. */
+.hb-striphead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--hb-gap) var(--hb-gap-wide);
+  margin-block: var(--hb-gap-wide) var(--hb-gap);
+}
+
+.hb-striphead:first-child {
+  margin-block-start: 0;
+}
+
+.hb-striphead .hb-rowhead {
+  padding-inline-end: 0;
+}
+
 /* --- A month broken into weeks -------------------------------------------
    One grid, every row on the same template, so the weekday names at the
    top, the dates in each band and the cells under them sit in the same

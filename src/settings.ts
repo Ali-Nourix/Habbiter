@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: HabbiterSettings = {
   totals: false,
   streak: true,
   size: 26,
-  band: "week",
+  band: "wrap",
   side: "start",
   round: false,
   alwaysShowControls: false,

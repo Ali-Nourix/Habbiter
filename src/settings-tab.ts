@@ -113,16 +113,21 @@ export class HabbiterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Break a month into weeks")
+      .setName("A month of days")
       .setDesc(
-        "A grid with a column per day is 31 wide, which no note is. Broken " +
-          "into weeks it stacks, the columns line up, and the weekday names " +
-          "are written once instead of squeezed beside every date.",
+        "A grid with a column per day is 31 wide, which no note is. Running " +
+          "on to the next line uses the width there is; breaking at the weeks " +
+          "lines the columns up, which is another way of drawing the calendar.",
       )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.settings.band === "week")
-          .onChange((value) => this.save({ band: value ? "week" : "none" })),
+      .addDropdown((drop) =>
+        drop
+          .addOptions({
+            wrap: "Run on to the next line",
+            week: "Break at the weeks",
+            none: "One line, scrolled",
+          })
+          .setValue(this.settings.band)
+          .onChange((value) => this.save({ band: value as HabbiterSettings["band"] })),
       );
 
     new Setting(containerEl)

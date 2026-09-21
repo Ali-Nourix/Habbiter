@@ -20,8 +20,12 @@ export type Mode = "month" | "grid";
 export type CellKind = "check" | "count";
 /** Which side the trackers take when the block also carries text. */
 export type Side = "none" | "start" | "end";
-/** How a month's worth of day columns is broken up so it fits the note. */
-export type Band = "week" | "none";
+/* How a month's worth of day columns is made to fit the note.
+   wrap — one strip of days that runs on to the next line at the edge.
+   week — broken at the weeks, which lines the columns up but is then
+          another way of drawing the calendar.
+   none — flat, and scrolled. */
+export type Band = "wrap" | "week" | "none";
 
 export interface BlockConfig {
   id?: string;
@@ -177,7 +181,7 @@ function readConfig(raw: Record<string, unknown>): BlockConfig {
   const side = readSide(raw.side ?? raw.wrap ?? raw.align);
   if (side) config.side = side;
 
-  const band = asEnum(raw.band ?? raw.weeks, ["week", "none"] as const);
+  const band = asEnum(raw.band ?? raw.weeks, ["wrap", "week", "none"] as const);
   if (band) config.band = band;
 
   const text = asString(raw.text ?? raw.note);

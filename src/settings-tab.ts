@@ -113,6 +113,19 @@ export class HabbiterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Break a month into weeks")
+      .setDesc(
+        "A grid with a column per day is 31 wide, which no note is. Broken " +
+          "into weeks it stacks, the columns line up, and the weekday names " +
+          "are written once instead of squeezed beside every date.",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.settings.band === "week")
+          .onChange((value) => this.save({ band: value ? "week" : "none" })),
+      );
+
+    new Setting(containerEl)
       .setName("Which side a tracker takes")
       .setDesc("Only applies to a tracker whose block also carries text.")
       .addDropdown((drop) =>

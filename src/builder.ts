@@ -148,6 +148,17 @@ export class BuilderModal extends Modal {
     }
 
     if (config.mode === "grid") this.drawGridFields(form);
+
+    if (config.mode === "grid" && config.columns.kind === "days") {
+      new Setting(form)
+        .setName("Break the month into weeks")
+        .setDesc("31 columns in one line needs a scrollbar. Weeks stack instead.")
+        .addToggle((toggle) =>
+          toggle
+            .setValue(config.band === "week")
+            .onChange((value) => this.update({ band: value ? "week" : "none" })),
+        );
+    }
     if (config.columns.kind === "days") this.drawCalendarFields(form);
 
     this.drawDisplayFields(form);

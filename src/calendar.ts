@@ -223,6 +223,33 @@ export function formatNumber(value: number, locale: string, numerals: Numerals):
   return fmt.format(value);
 }
 
+export const DAYS_IN_WEEK = 7;
+
+/* Splits a run of consecutive days into weeks, padded at both ends so every
+   week is seven long and every one starts on the same weekday. That padding
+   is the whole point: it is what lines the columns up down the page, and so
+   what lets the weekday names be written once above them all.
+
+   Generic over what a day carries, so it can be tested without building a
+   grid to test it with. */
+export function intoWeeks<T>(
+  days: T[],
+  firstWeekday: number,
+  weekStart: number,
+): Array<Array<T | null>> {
+  if (!days.length) return [];
+
+  const lead = ((firstWeekday - weekStart) % DAYS_IN_WEEK + DAYS_IN_WEEK) % DAYS_IN_WEEK;
+  const slots: Array<T | null> = [...Array<T | null>(lead).fill(null), ...days];
+  while (slots.length % DAYS_IN_WEEK) slots.push(null);
+
+  const weeks: Array<Array<T | null>> = [];
+  for (let i = 0; i < slots.length; i += DAYS_IN_WEEK) {
+    weeks.push(slots.slice(i, i + DAYS_IN_WEEK));
+  }
+  return weeks;
+}
+
 /* 0 = Sunday … 6 = Saturday, to match Date.getDay(). Intl reports 1-7 with
    Monday first, so Sunday comes back as 7 and has to wrap. */
 export function defaultWeekStart(system: CalendarSystem, locale: string): number {

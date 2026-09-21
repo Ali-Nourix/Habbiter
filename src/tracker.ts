@@ -14,8 +14,10 @@ import {
   addDays,
   civilOf,
   dateOf,
+  DAYS_IN_WEEK,
   dayTitle,
   formatNumber,
+  intoWeeks,
   isoKey,
   monthLength,
   monthTitle,
@@ -106,6 +108,12 @@ export class TrackerView extends MarkdownRenderChild {
      widget: as wide as the grid it shows and no wider, or there is nothing
      left for whatever is beside it. One with the block to itself can spread
      its header out along it. */
+  /* Only day columns band: a week is a real thing to break a month into,
+     and columns somebody named themselves have no such seam in them. */
+  private get isBanded(): boolean {
+    return this.config.band === "week" && this.config.columns.kind === "days";
+  }
+
   private get isCompact(): boolean {
     return Boolean(this.deps.group) || Boolean(this.deps.compact);
   }
@@ -133,6 +141,7 @@ export class TrackerView extends MarkdownRenderChild {
 
     this.renderHead(el, anchor);
     if (this.config.mode === "month") this.renderCalendar(el, anchor);
+    else if (this.isBanded) this.renderBands(el);
     else this.renderGrid(el);
     if (this.deps.unanchored && this.deps.openBuilder) this.renderUnanchoredNotice(el);
 
@@ -316,6 +325,96 @@ export class TrackerView extends MarkdownRenderChild {
     for (let i = 0; i < trail; i++) {
       grid.createDiv({ cls: "hb-blank" });
       this.cells.push(null);
+    }
+  }
+
+  /* A month laid flat is 31 columns, which is wider than any note and ends
+     in a scrollbar — and a scrollbar is where a tracker stops being glanced
+     at. Broken into weeks it stacks instead, and because every band starts
+     on the same weekday the columns line up down the page, which is what
+     lets the weekday names be stated once at the top instead of crammed
+     into each 26px column beside a date. */
+  private renderBands(parent: HTMLElement): void {
+    const { config } = this;
+    const named = this.rows.some((row) => row !== "");
+    const stats = this.gridStatColumns();
+    this.columnsPerRow = DAYS_IN_WEEK;
+
+    /* One grid for the lot, not a grid per row. Sibling grids each size
+       their own label column to their own contents, so the weekday names,
+       the dates and the cells would each sit a few pixels off the others;
+       sharing one template is what keeps the weeks in line down the page.
+       Subgrid would say this better and is younger than the Electron some
+       vaults are still on. */
+    const grid = parent.createDiv({ cls: "hb-body" }).createDiv({ cls: "hb-bands" });
+    grid.style.setProperty("--hb-cols", String(DAYS_IN_WEEK));
+    grid.toggleClass("has-labels", named);
+
+    const spacer = () => {
+      if (named) grid.createDiv({ cls: "hb-rowhead is-spacer" });
+    };
+    const gap = () => grid.createDiv({ cls: "hb-bandgap" });
+
+    if (config.weekdays) {
+      const wide = weekdayLabels(config.locale, config.weekStart);
+      const narrow = weekdayLabels(config.locale, config.weekStart, true);
+      spacer();
+      narrow.forEach((label, index) => {
+        const cell = grid.createDiv({ cls: "hb-weekday", text: label });
+        cell.setAttribute("aria-label", wide[index]);
+        setTooltip(cell, wide[index], { placement: "top" });
+      });
+    }
+
+    const first = this.columns[0]?.date;
+    const weeks = first
+      ? intoWeeks(this.columns, first.getDay(), config.weekStart)
+      : [this.columns];
+
+    weeks.forEach((week, index) => {
+      if (index > 0 || config.weekdays) gap();
+
+      spacer();
+      for (const column of week) {
+        const cell = grid.createDiv({ cls: "hb-colhead" });
+        if (!column) continue;
+        cell.toggleClass("is-today", Boolean(column.date && sameDay(column.date, today())));
+        cell.setText(column.label);
+      }
+
+      for (const row of this.rows) {
+        if (named) grid.createDiv({ cls: "hb-rowhead", text: row });
+        for (const column of week) {
+          if (!column) {
+            grid.createDiv({ cls: "hb-blank" });
+            this.cells.push(null);
+            continue;
+          }
+          this.cells.push(this.renderCell(grid, row, column, row));
+        }
+      }
+    });
+
+    if (!stats.length) return;
+
+    /* One tally for the month, not one per band: a total that started over
+       every week would not be the number anybody asked for. It goes across
+       the day columns rather than in columns of its own, so the grid keeps
+       the one template every other row is using. */
+    gap();
+    for (const row of this.rows) {
+      if (named) grid.createDiv({ cls: "hb-rowhead", text: row });
+      const line = grid.createDiv({ cls: "hb-stats-row" });
+      for (const stat of stats) {
+        const box = line.createSpan({ cls: "hb-stat" });
+        box.createSpan({ cls: "hb-stat-name", text: stat.label });
+        const cell: StatCell = {
+          el: box.createSpan({ cls: "hb-stat-value" }),
+          compute: () => stat.of(row),
+        };
+        this.statCells.push(cell);
+        this.paintStat(cell);
+      }
     }
   }
 

@@ -65,16 +65,6 @@ jobs:
           }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Refuse to rewrite a release that is already out
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null | grep -qx false; then
-            echo "::error::$VERSION is already published. Bump the version."
-            exit 1
-          fi
-
       - run: npm ci
 
       - name: Typecheck, test and bundle
@@ -105,10 +95,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
+          WANTED: main.js,manifest.json,styles.css
         run: |
+          set -euo pipefail
+
+          # An unpublished release for this version is wreckage from a run
+          # that stopped short. It holds the same tag as the real one and
+          # shadows it in every lookup, so it goes first.
+          gh api "repos/$GITHUB_REPOSITORY/releases" \
+            --jq ".[] | select(.draft and .tag_name == \"$VERSION\") | .id" \
+          | while read -r id; do
+              echo "deleting unpublished release $id"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            done
+
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            # An unpublished release from an earlier run: replace its files
-            # with the ones just built, then put it out.
+            have=$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')
+            out=$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')
+            # Out already, and carrying its files: that is a shipped release
+            # and not something to overwrite. Anything else — no files, or
+            # never published — is a release that did not finish, and
+            # finishing it is the job.
+            if [ "$out" = "true" ] && [ "$have" = "$WANTED" ]; then
+              echo "::error::$VERSION is already out with its files. Bump the version."
+              exit 1
+            fi
+            echo "completing the existing release for $VERSION (published=$out, files=[$have])"
             gh release upload "$VERSION" main.js manifest.json styles.css --clobber
             gh release edit "$VERSION" --draft=false --latest
           else
@@ -119,8 +131,17 @@ jobs:
               main.js manifest.json styles.css
           fi
 
-          echo "Files on the tag:"
-          gh release view "$VERSION" --json isDraft,assets \
-            -q '"published=" + (.isDraft | not | tostring), (.assets[] | "  " + .name + "  " + (.size|tostring) + " bytes")'
+      - name: The files are on the tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release view "$VERSION" --json isDraft,url,assets \
+            -q '"published: " + (.isDraft | not | tostring), "url: " + .url,
+                (.assets[] | "  " + .name + "  " + (.size | tostring) + " bytes")'
 
-          gh release view "$VERSION" --json isDraft -q .isDraft | grep -qx false
+          # A green run that shipped nothing is the failure this whole file
+          # exists to avoid, so it is asserted rather than eyeballed.
+          [ "$(gh release view "$VERSION" --json isDraft -q '.isDraft | not')" = "true" ]
+          [ "$(gh release view "$VERSION" --json assets -q '[.assets[].name] | sort | join(",")')" = "main.js,manifest.json,styles.css" ]

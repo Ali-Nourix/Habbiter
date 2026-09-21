@@ -200,8 +200,10 @@ which is the whole point of building them.
 The same workflow can also be started from the Actions tab with a version,
 and will mint the tag itself from the branch it was run on — the path for
 anywhere a tag cannot be pushed by hand. It refuses a version the manifest
-does not claim, and refuses to overwrite a release that is already out; a
-version whose release never got published it finishes rather than fails.
+does not claim, and refuses to overwrite a release that is already out with
+its files. A release that did not finish — unpublished, or published with
+nothing attached — it repairs and completes, and it asserts at the end that
+all three files really are on the tag.
 
 `.github/workflows/ci.yml` runs on every push: typecheck, tests, bundle, and
 a check that the committed `main.js` is the one the source builds.

@@ -9,6 +9,7 @@
    ========================================================================== */
 
 import { parseYaml, stringifyYaml } from "obsidian";
+import { fenceLines } from "./fence";
 import type { CalendarSystem, Numerals } from "./calendar";
 import { defaultWeekStart } from "./calendar";
 import type { HabbiterSettings } from "./settings";
@@ -353,7 +354,7 @@ export function serializeBlock(doc: BlockDocument): string {
 }
 
 export function toCodeBlock(doc: BlockDocument): string {
-  return "```" + BLOCK_LANGUAGE + "\n" + serializeBlock(doc) + "\n```";
+  return fenceLines(serializeBlock(doc), "").join("\n");
 }
 
 /** Drops anything matching the vault default, so blocks stay short. */

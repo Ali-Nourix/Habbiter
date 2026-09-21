@@ -209,6 +209,27 @@ tracker in a right-to-left note lays itself out right to left.
 Ticks are always filed under the real date, so switching a tracker between
 calendars re-labels the grid without losing a single one.
 
+## In a callout
+
+A tracker works inside a callout, a quote, or a nested one, and editing it
+there writes back correctly — the block keeps the `>` on every line,
+including the blank ones, so the callout does not end where the tracker
+starts.
+
+````markdown
+> [!tip] Morning
+>
+> ```habbiter
+> id: hb-abc
+> title: Meditate
+> ```
+````
+
+This is worth saying because it was broken until 1.4.0. Obsidian's section
+info points at the section a block belongs to, and inside a callout that is
+the callout, not the fence — so an edit looked for a fence where `> [!tip]`
+was standing, found none, and refused to save.
+
 ## Where the ticks are kept
 
 In the plugin's own data file — `.obsidian/plugins/habbiter/data.json` —

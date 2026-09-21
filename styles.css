@@ -1,0 +1,549 @@
+/* ==========================================================================
+   HABBITER
+   Every value here is read from Obsidian's own variables, and from the theme's
+   where the theme offers a better one. Nothing is a literal colour, so a
+   tracker is whatever colour the vault is — and a theme that redefines an
+   accent, a checkbox corner or a border alpha moves the tracker with it.
+
+   The tracker draws no surface of its own on purpose. It is content: it sits
+   on the page the way a table does, and only the controls that change it get
+   to behave like chrome.
+   ========================================================================== */
+
+.hb-root {
+  /* --- Tokens --------------------------------------------------------
+     Each line is: the theme's token if it is there, then Obsidian's, then a
+     literal. The literal is the last resort and never the thing in use. */
+  --hb-ease: var(--bc-ease, cubic-bezier(0.2, 0, 0, 1));
+  --hb-speed: var(--bc-speed, 120ms);
+  --hb-gap: var(--bc-gap-2, 4px);
+  --hb-gap-wide: var(--bc-gap-3, 8px);
+
+  --hb-radius: var(--bc-check-radius, var(--checkbox-radius, 4px));
+  --hb-radius-tool: var(--bc-radius, var(--radius-s, 4px));
+
+  --hb-line: var(--bc-control-border, var(--background-modifier-border));
+  --hb-line-strong: var(--background-modifier-border-hover);
+  --hb-hover: var(--background-modifier-hover);
+  --hb-page: var(--background-primary);
+
+  --hb-accent: var(--bc-ac-fill, var(--interactive-accent));
+  --hb-accent-hover: var(--bc-ac-fill-hover, var(--interactive-accent-hover));
+  --hb-on-accent: var(--text-on-accent);
+  --hb-ring: var(--bc-ac-a40, color-mix(in srgb, var(--hb-accent) 45%, transparent));
+
+  --hb-ink: var(--text-normal);
+  --hb-muted: var(--text-muted);
+
+  --hb-hit: var(--bc-hit, 28px);
+  --hb-size: 26px;
+  --hb-cell: var(--hb-size);
+  --hb-fill: 0;
+
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-smaller, 12px);
+  line-height: 1.35;
+  color: var(--hb-ink);
+  margin-block: var(--hb-gap-wide);
+
+  /* As wide as the tracker, not as wide as the note. A header stretched to
+     the text column leaves the streak floating in empty page, a long way
+     from the grid it is counting. */
+  inline-size: fit-content;
+  max-inline-size: 100%;
+
+  /* The whole point. Whatever the block is sitting in stays visible. */
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.hb-root.is-round {
+  --hb-radius: 50%;
+}
+
+/* A rendered tracker replaces the code block, so nothing of the fence's own
+   styling survives in reading view. Live Preview keeps the wrapper, and the
+   wrapper is where the card the tracker is trying not to be comes from. */
+.block-language-habbiter {
+  background: none;
+}
+
+.markdown-source-view.mod-cm6 .cm-embed-block:has(.block-language-habbiter),
+.markdown-source-view.mod-cm6 .cm-embed-block:has(.block-language-habbiter):hover {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* --- Header --------------------------------------------------------------
+   The month you are looking at is content and stays put. The buttons that
+   change it are chrome and stay out of the way. */
+
+.hb-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-gap-wide);
+  min-block-size: var(--hb-hit);
+  margin-block-end: var(--hb-gap);
+}
+
+.hb-title {
+  font-size: var(--font-ui-small, 13px);
+  font-weight: var(--font-semibold, 600);
+  color: var(--hb-ink);
+}
+
+.hb-month {
+  color: var(--hb-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* With no title of its own, the month is the tracker's name. */
+.hb-month.is-lead {
+  font-size: var(--font-ui-small, 13px);
+  font-weight: var(--font-semibold, 600);
+  color: var(--hb-ink);
+}
+
+/* Muted, not faint. These are read, and a theme's faint ink is a de-emphasis
+   colour — Bookcloth's lands at 2.8:1 on the light page, which is fine for a
+   rule or a placeholder and not fine for a number someone is looking up. The
+   hierarchy below the month is carried by size instead. */
+.hb-stats {
+  display: flex;
+  gap: var(--hb-gap-wide);
+  margin-inline-start: auto;
+  color: var(--hb-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* The labels are English whatever the note is written in, so they are
+     isolated from its direction: in a Persian note "12 day streak" would
+     otherwise be reordered into "day streak 12". The flex row still places
+     this block at the correct end of the header. */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.hb-stat.is-live {
+  color: var(--hb-ink);
+}
+
+.hb-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--bc-icon-gap, 2px);
+  /* Never display:none — the row would resize under the pointer the moment
+     it arrived, and the thing you were reaching for would move. */
+  margin-inline-start: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hb-speed) var(--hb-ease);
+}
+
+.hb-root:hover .hb-tools,
+.hb-root:focus-within .hb-tools,
+.hb-root.is-menu-open .hb-tools,
+.hb-root.is-controls-visible .hb-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- A note on these two selectors ---------------------------------------
+   `.hb-root button.hb-cell`, not `.hb-cell`. Themes size icon buttons by
+   guessing at plugin markup — Bookcloth's guess is
+   `button:has(> :only-child svg)`, which is a fair description of a toolbar
+   button and also, exactly, of a tracker cell holding a tick. Its specificity
+   beats a lone class, so a cell came out 28px wide with 4px of padding
+   whatever its size was set to. Carrying the element name puts the geometry
+   back where the plugin can answer for it, without an !important anywhere.
+   The hit size itself still comes from the theme's own token, so a tracker's
+   buttons stay the same square as the rest of the app's. */
+
+.hb-root button.hb-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--hb-hit);
+  block-size: var(--hb-hit);
+  min-inline-size: 0;
+  padding: 0;
+  gap: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: var(--hb-radius-tool);
+  color: var(--hb-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--hb-speed) var(--hb-ease),
+    color var(--hb-speed) var(--hb-ease);
+}
+
+.hb-tool:hover {
+  background-color: var(--hb-hover);
+  color: var(--hb-ink);
+}
+
+.hb-tool:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--hb-ring);
+}
+
+.hb-tool .svg-icon {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+/* "Previous" points the other way when the line does. */
+[dir="rtl"] .hb-tool.is-nav .svg-icon {
+  transform: scaleX(-1);
+}
+
+/* --- Bodies --------------------------------------------------------------- */
+
+.hb-body {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding-block-end: 2px;
+}
+
+.hb-cal {
+  display: grid;
+  grid-template-columns: repeat(var(--hb-cols), var(--hb-cell));
+  gap: var(--hb-gap);
+  justify-content: start;
+}
+
+.hb-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(var(--hb-cols), var(--hb-cell))
+    repeat(var(--hb-stats), max-content);
+  gap: var(--hb-gap);
+  align-items: center;
+  justify-content: start;
+  inline-size: max-content;
+}
+
+.hb-grid.has-labels {
+  grid-template-columns:
+    [labels] max-content
+    repeat(var(--hb-cols), var(--hb-cell))
+    repeat(var(--hb-stats), max-content);
+}
+
+.hb-weekday,
+.hb-colhead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: calc(var(--hb-cell) * 0.7);
+  color: var(--hb-muted);
+  font-size: clamp(10px, calc(var(--hb-cell) * 0.38), 12px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.hb-colhead.is-today {
+  color: var(--hb-accent);
+}
+
+.hb-colhead.is-stat,
+.hb-rowhead {
+  justify-content: start;
+  text-align: start;
+}
+
+.hb-colhead.is-stat {
+  padding-inline-start: var(--hb-gap-wide);
+}
+
+.hb-rowhead {
+  display: flex;
+  align-items: center;
+  color: var(--hb-ink);
+  font-size: var(--font-ui-smaller, 12px);
+  white-space: nowrap;
+  padding-inline-end: var(--hb-gap-wide);
+}
+
+/* The label column has to survive being scrolled past on a 31-day grid, and
+   the only thing it can sit on without becoming a card is the page itself.
+   CSS cannot read the colour actually painted behind an element, so --hb-page
+   is a knob: a theme or a snippet sets it where a tracker sits on something
+   other than the note — inside a callout, inside an embed. */
+.hb-sticky {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background-color: var(--hb-page);
+}
+
+.hb-statcell {
+  color: var(--hb-muted);
+  font-variant-numeric: tabular-nums;
+  padding-inline-start: var(--hb-gap-wide);
+}
+
+.hb-blank {
+  inline-size: var(--hb-cell);
+  block-size: var(--hb-cell);
+}
+
+/* --- Cells ---------------------------------------------------------------- */
+
+.hb-root button.hb-cell {
+  inline-size: var(--hb-cell);
+  block-size: var(--hb-cell);
+  min-inline-size: 0;
+  min-block-size: 0;
+  position: relative;
+  display: block;
+  padding: 0;
+  gap: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: var(--hb-radius);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Absolute rather than a stretched grid item. A cell whose theme has set
+   justify-items: center sizes its track to the content, and a percentage
+   against a content-sized track resolves to auto — which is how a 26px cell
+   came to hold an 18px box. Insets do not have that argument either. */
+.hb-mark {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--hb-line);
+  color: var(--hb-muted);
+  transition:
+    background-color var(--hb-speed) var(--hb-ease),
+    box-shadow var(--hb-speed) var(--hb-ease),
+    color var(--hb-speed) var(--hb-ease);
+}
+
+.hb-cell:hover .hb-mark {
+  background-color: var(--hb-hover);
+  box-shadow: inset 0 0 0 1px var(--hb-line-strong);
+}
+
+.hb-cell:focus-visible {
+  outline: none;
+}
+
+.hb-cell:focus-visible .hb-mark {
+  box-shadow:
+    inset 0 0 0 1px var(--hb-line-strong),
+    0 0 0 2px var(--hb-ring);
+}
+
+/* Today is marked by a ring and a heavier number, not by colour alone. */
+.hb-cell.is-today:not(.is-done) .hb-mark {
+  box-shadow: inset 0 0 0 1px var(--hb-accent);
+  color: var(--hb-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+.hb-num {
+  font-size: clamp(10px, calc(var(--hb-cell) * 0.42), 15px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Two borders of a square, turned 45 degrees: the tick every checkbox on the
+   web is drawn with. It takes currentColor, scales with the cell, and no
+   icon rule anywhere can reach it. */
+.hb-check {
+  inline-size: calc(var(--hb-cell) * 0.28);
+  block-size: calc(var(--hb-cell) * 0.5);
+  /* Sat on the geometric centre, the tick reads low and left; this is the
+     offset that puts it on the optical one. */
+  margin-block-start: calc(var(--hb-cell) * -0.06);
+  /* Physical sides on purpose. A tick is a symbol, not text: it points the
+     same way in a Persian note as in an English one, and logical borders
+     would mirror it. */
+  border: 0 solid currentColor;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.5);
+  transition:
+    opacity var(--hb-speed) var(--hb-ease),
+    transform var(--hb-speed) var(--hb-ease);
+}
+
+.hb-cell.is-done .hb-check {
+  opacity: 1;
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-check {
+    transform: rotate(45deg);
+  }
+}
+
+/* A checkbox that is ticked is a solid block where an empty one is an
+   outline — a difference you can still see with the colour taken away. */
+.hb-root[data-cell="check"] .hb-cell.is-done .hb-mark {
+  background-color: var(--hb-accent);
+  box-shadow: inset 0 0 0 1px transparent;
+  color: var(--hb-on-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+.hb-root[data-cell="check"] .hb-cell.is-done:hover .hb-mark {
+  background-color: var(--hb-accent-hover);
+}
+
+/* Today keeps a mark of its own once it is ticked. An accent ring would be
+   invisible against an accent fill, so the ring is a gap cut in the fill —
+   which is why --hb-page has to be right for where the tracker is sitting. */
+.hb-root[data-cell="check"] .hb-cell.is-today.is-done .hb-mark {
+  box-shadow: inset 0 0 0 2px var(--hb-page);
+}
+
+/* A counter carries its number, so it washes rather than fills: text on a
+   part-filled cell has to stay readable at every value it can hold. */
+.hb-root[data-cell="count"] .hb-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--hb-accent);
+  opacity: calc(var(--hb-fill, 0) * 0.42);
+  transition: opacity var(--hb-speed) var(--hb-ease);
+}
+
+.hb-root[data-cell="count"] .hb-num {
+  position: relative;
+  color: var(--hb-ink);
+}
+
+.hb-root[data-cell="count"] .hb-cell.is-full .hb-mark {
+  box-shadow: inset 0 0 0 1px var(--hb-accent);
+}
+
+/* --- Notices -------------------------------------------------------------- */
+
+.hb-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-gap);
+  margin-block-start: var(--hb-gap-wide);
+  color: var(--hb-muted);
+}
+
+.hb-notice-action {
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--hb-accent);
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hb-error {
+  display: flex;
+  gap: var(--hb-gap-wide);
+  color: var(--text-error);
+}
+
+.hb-error-label {
+  color: var(--hb-muted);
+}
+
+/* --- Builder -------------------------------------------------------------- */
+
+/* The preview is the real component on the real page colour, so the only
+   thing separating it from the form is a hairline. */
+.hb-builder-modal .hb-preview {
+  padding: var(--bc-gap-5, 16px);
+  margin-block-end: var(--bc-gap-5, 16px);
+  border-radius: var(--bc-pane-radius, var(--radius-l, 8px));
+  background-color: var(--background-primary);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  overflow-x: auto;
+}
+
+.hb-builder-modal .hb-preview .hb-root {
+  margin-block: 0;
+}
+
+/* Nothing to summon in here: the preview exists to be looked at. */
+.hb-builder-modal .hb-preview .hb-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hb-builder-modal .setting-item {
+  padding-block: var(--bc-gap-3, 8px);
+}
+
+.hb-builder-modal .hb-more {
+  margin-block-start: var(--bc-gap-3, 8px);
+}
+
+.hb-builder-modal .hb-more > summary {
+  padding-block: var(--bc-gap-3, 8px);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small, 13px);
+  cursor: pointer;
+}
+
+.hb-settings-intro {
+  margin-block-end: var(--bc-gap-5, 16px);
+}
+
+/* --- Conditions ----------------------------------------------------------- */
+
+/* A finger is not a pointer: the controls cannot be summoned by hovering, so
+   they are simply there, and a cell is never smaller than a fingertip. */
+@media (pointer: coarse) {
+  .hb-root {
+    --hb-hit: 36px;
+    --hb-cell: max(var(--hb-size), 30px);
+  }
+
+  .hb-tools {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .hb-mark {
+    box-shadow: inset 0 0 0 1.5px var(--hb-line-strong);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-root *,
+  .hb-root *::before {
+    transition-duration: 0ms;
+  }
+
+}
+
+/* On paper there is no hover and nothing to press. */
+@media print {
+  .hb-tools,
+  .hb-notice {
+    display: none;
+  }
+
+  .hb-cell {
+    cursor: default;
+  }
+}

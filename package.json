@@ -1,0 +1,25 @@
+{
+  "name": "habbiter",
+  "version": "1.0.0",
+  "description": "Habit and tracker grids that live inside your notes.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node test/run.mjs && node esbuild.config.mjs production",
+    "test": "node test/run.mjs"
+  },
+  "keywords": [
+    "obsidian",
+    "habit-tracker"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.2",
+    "obsidian": "latest",
+    "typescript": "^5.7.2",
+    "js-yaml": "^4.1.0",
+    "@types/js-yaml": "^4.0.9"
+  }
+}

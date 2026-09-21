@@ -75,23 +75,64 @@ const monthly = pruneToDefaults(
 );
 ok("month mode drops grid keys", !("rows" in monthly) && !("columns" in monthly));
 
-/* --- Placement ----------------------------------------------------------
+/* --- Text in the block --------------------------------------------------
+   This is a paragraph somebody typed, going through YAML and back into
+   their note. Newlines, colons, quotes, markdown punctuation and Persian
+   all have to come out the other side exactly as they went in, because the
+   block is rewritten every time anything else about the tracker changes. */
+
+const PROSE = [
+  "Meditate: ten minutes, **before** coffee.",
+  "",
+  "- [[Morning routine]]",
+  '- "quoted", #tagged, 50% of days',
+  "  indented continuation",
+  "صبح‌ها، قبل از قهوه.",
+].join("\n");
+
+const withText = pruneToDefaults(
+  { id: "t1", title: "Meditate", text: PROSE, side: "end" },
+  DEFAULT_SETTINGS,
+);
+const textFence = toCodeBlock({ shared: withText, group: null });
+const textBack = parseBlock(textFence.split("\n").slice(1, -1).join("\n"));
+
+ok("a block with text parses", !textBack.error);
+check("the text comes back byte for byte", JSON.stringify(textBack.doc.shared.text), JSON.stringify(PROSE));
+check("and keeps its side", textBack.doc.shared.side, "end");
+ok("the fence is still one fence", textFence.split("```").length === 3);
+ok(
+  "nothing in the text can close the fence",
+  !textFence.split("\n").slice(1, -1).some((line) => line.startsWith("```")),
+);
+
+/* Text belongs to the block, not to one tracker in a row. */
+const rowWithText = buildGroup(
+  [
+    { id: "r1", title: "A", text: PROSE },
+    { id: "r2", title: "B", text: PROSE },
+  ],
+  DEFAULT_SETTINGS,
+);
+ok("text is never folded into the shared options", rowWithText.shared.text === undefined);
+
+/* --- Which side ---------------------------------------------------------
    "left" and "right" are what people type; a tracker in a Persian note
    belongs at the start of the line, which is the right one. */
 
-check("left means the start of the line", parseBlock("wrap: left").doc.shared.wrap, "start");
-check("right means the end of it", parseBlock("wrap: RIGHT").doc.shared.wrap, "end");
-check("float is the same key", parseBlock("float: start").doc.shared.wrap, "start");
-check("none is a band of its own", parseBlock("wrap: none").doc.shared.wrap, "none");
-check("nonsense is ignored", parseBlock("wrap: sideways").doc.shared.wrap, undefined);
+check("left means the start of the line", parseBlock("side: left").doc.shared.side, "start");
+check("right means the end of it", parseBlock("side: RIGHT").doc.shared.side, "end");
+check("wrap still works, as 1.2.0 spelled it", parseBlock("wrap: start").doc.shared.side, "start");
+check("none is a band of its own", parseBlock("side: none").doc.shared.side, "none");
+check("nonsense is ignored", parseBlock("side: sideways").doc.shared.side, undefined);
 check(
   "a placement survives the round trip",
   parseBlock(
-    toCodeBlock({ shared: pruneToDefaults({ id: "w", wrap: "end" }, DEFAULT_SETTINGS), group: null })
+    toCodeBlock({ shared: pruneToDefaults({ id: "w", side: "end" }, DEFAULT_SETTINGS), group: null })
       .split("\n")
       .slice(1, -1)
       .join("\n"),
-  ).doc.shared.wrap,
+  ).doc.shared.side,
   "end",
 );
 

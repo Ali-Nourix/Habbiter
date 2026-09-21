@@ -55,19 +55,18 @@ const SAMPLES: Sample[] = [
     },
   },
   {
-    caption: "Floated to the start — text runs beside it",
-    block: { id: "w1", title: "Meditate", size: 22, wrap: "start" },
+    caption: "Text beside it, tracker on the starting side",
+    block: { id: "w1", title: "Meditate", size: 22, side: "start" },
     prose: true,
   },
   {
-    caption: "Floated to the end",
-    block: { id: "w2", title: "Read", size: 22, wrap: "end" },
+    caption: "Text beside it, tracker on the other side",
+    block: { id: "w2", title: "Read", size: 22, side: "end" },
     prose: true,
   },
   {
-    caption: "A band of its own, the default",
+    caption: "No text in the block — the tracker has it to itself",
     block: { id: "w3", title: "Walk", size: 22 },
-    prose: true,
   },
   {
     caption: "A row of them in one block — drag by the grip to reorder",
@@ -122,7 +121,7 @@ function sampleValues(block: BlockConfig, rows: string[], goal: number): MemoryV
 
 const root = document.getElementById("samples") as HTMLElement;
 
-function mount(host: HTMLElement, block: BlockConfig, group?: boolean): void {
+function mount(host: HTMLElement, block: BlockConfig, group?: boolean, compact?: boolean): void {
   const config = resolveConfig(block, DEFAULT_SETTINGS);
   if (block.id === "b") config.round = true;
   new TrackerView(host, {
@@ -131,7 +130,8 @@ function mount(host: HTMLElement, block: BlockConfig, group?: boolean): void {
     values: sampleValues(block, config.rows, config.cell === "count" ? config.goal : 1),
     /* The harness has nowhere to write an order to, so the grip is present
        and labelled but does not rearrange anything. */
-    group: group ? { grab: () => {}, move: () => {}, position: () => ({ index: 0, count: 2 }) } : undefined,
+    group: group ? { move: () => {}, position: () => ({ index: 0, count: 2 }) } : undefined,
+    compact,
   }).load();
 }
 
@@ -148,8 +148,18 @@ for (const sample of SAMPLES) {
       mount(row.createDiv({ cls: "hb-slot" }).createDiv(), block, true);
     }
   } else if (sample.block) {
-    mount(host.createDiv(), sample.block);
+    /* The same shape block.ts builds: the block's own two columns, not a
+       float on the note. The harness stands in for Obsidian's markdown
+       renderer with a plain paragraph. */
+    if (sample.prose) {
+      const block = host.createDiv({ cls: "hb-block" });
+      block.dataset.side = sample.block.side ?? "start";
+      const pair = block.createDiv({ cls: "hb-pair" });
+      mount(pair.createDiv({ cls: "hb-main" }).createDiv(), sample.block, false, true);
+      pair.createDiv({ cls: "hb-text markdown-rendered" }).createEl("p", { text: PROSE });
+    } else {
+      mount(host.createDiv({ cls: "hb-block" }).createDiv(), sample.block);
+    }
   }
 
-  if (sample.prose) host.createEl("p", { cls: "sample-prose", text: PROSE });
 }

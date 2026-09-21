@@ -21,10 +21,9 @@ import {
   trackersOf,
 } from "./config";
 import type { BlockConfig, BlockDocument } from "./config";
-import { TrackerGroup } from "./group";
+import { TrackerBlock } from "./block";
 import { HabbiterSettingTab } from "./settings-tab";
 import { Store } from "./store";
-import { TrackerView } from "./tracker";
 import { StoreValues } from "./values";
 
 /* An opening fence may carry extra backticks and trailing text; a closing
@@ -32,9 +31,10 @@ import { StoreValues } from "./values";
 const OPENING_FENCE = new RegExp(`^\\s*\`{3,}\\s*${BLOCK_LANGUAGE}\\s*$`);
 const CLOSING_FENCE = /^\s*`{3,}\s*$/;
 
-interface MountedTracker {
-  view: TrackerView;
-  block: BlockConfig;
+interface MountedBlock {
+  child: TrackerBlock;
+  /** One per view the block built, in the same order. */
+  configs: BlockConfig[];
 }
 
 /** The whole of a block, so a write can put back what it did not change. */
@@ -46,7 +46,7 @@ interface BlockHandle {
 export default class HabbiterPlugin extends Plugin {
   store!: Store;
 
-  private readonly mounted = new Set<MountedTracker>();
+  private readonly mounted = new Set<MountedBlock>();
   /* Blocks whose id is being written. Without this, the render triggered by
      our own edit races the edit and hands the same block a second id. */
   private readonly claiming = new Set<string>();
@@ -66,7 +66,9 @@ export default class HabbiterPlugin extends Plugin {
            full redraw would cut its animation short — so only the copies
            you are not touching are brought up to date. */
         for (const entry of this.mounted) {
-          if (!entry.view.containerEl.contains(document.activeElement)) entry.view.refresh();
+          for (const view of entry.child.views) {
+            if (!view.containerEl.contains(document.activeElement)) view.refresh();
+          }
         }
       }),
     );
@@ -90,7 +92,10 @@ export default class HabbiterPlugin extends Plugin {
 
   refreshAll(): void {
     for (const entry of this.mounted) {
-      entry.view.refresh({ config: resolveConfig(entry.block, this.store.settings) });
+      entry.child.views.forEach((view, index) => {
+        const block = entry.configs[index];
+        if (block) view.refresh({ config: resolveConfig(block, this.store.settings) });
+      });
     }
   }
 
@@ -140,25 +145,21 @@ export default class HabbiterPlugin extends Plugin {
       };
     });
 
-    if (mounted.length === 1) {
-      const only = mounted[0];
-      const view = new TrackerView(el, only.deps);
-      this.track(view, only.block);
-      ctx.addChild(view);
-      return;
-    }
-
-    const group = new TrackerGroup(el, {
+    /* The text is the block's, not any one tracker's, so it is read off the
+       shared options — an entry that sets its own is ignored for this. */
+    const child = new TrackerBlock(el, {
+      app: this.app,
+      sourcePath: ctx.sourcePath,
+      text: doc.shared.text ?? "",
+      side: resolveConfig(doc.shared, this.store.settings).side,
       trackers: mounted,
       reorder: (order) => this.writeOrder(handle, order),
     });
-    ctx.addChild(group);
-  }
+    ctx.addChild(child);
 
-  private track(view: TrackerView, block: BlockConfig): void {
-    const entry: MountedTracker = { view, block };
+    const entry: MountedBlock = { child, configs: mounted.map((m) => m.block) };
     this.mounted.add(entry);
-    view.register(() => this.mounted.delete(entry));
+    child.register(() => this.mounted.delete(entry));
   }
 
   /* --- Changing one tracker inside a block --------------------------------- */

@@ -17,8 +17,8 @@ export const BLOCK_LANGUAGE = "habbiter";
 
 export type Mode = "month" | "grid";
 export type CellKind = "check" | "count";
-/** Where a tracker sits in the text: in the flow, or with text beside it. */
-export type Wrap = "none" | "start" | "end";
+/** Which side the trackers take when the block also carries text. */
+export type Side = "none" | "start" | "end";
 
 export interface BlockConfig {
   id?: string;
@@ -37,7 +37,9 @@ export interface BlockConfig {
   totals?: boolean;
   streak?: boolean;
   size?: number;
-  wrap?: Wrap;
+  side?: Side;
+  /** Markdown set beside the trackers, inside the block. */
+  text?: string;
   rows?: string[];
   columns?: string[] | number | "days";
 }
@@ -73,7 +75,7 @@ export interface ResolvedConfig {
   totals: boolean;
   streak: boolean;
   size: number;
-  wrap: Wrap;
+  side: Side;
   round: boolean;
   alwaysShowControls: boolean;
   rows: string[];
@@ -165,8 +167,12 @@ function readConfig(raw: Record<string, unknown>): BlockConfig {
   const size = asNumber(raw.size);
   if (size !== undefined) config.size = clamp(Math.round(size), MIN_SIZE, MAX_SIZE);
 
-  const wrap = readWrap(raw.wrap ?? raw.float ?? raw.align);
-  if (wrap) config.wrap = wrap;
+  /* wrap was this option's name in 1.2.0, when it floated the block. */
+  const side = readSide(raw.side ?? raw.wrap ?? raw.align);
+  if (side) config.side = side;
+
+  const text = asString(raw.text ?? raw.note);
+  if (text !== undefined) config.text = text;
 
   const flags: Array<[keyof BlockConfig, unknown]> = [
     ["dayNumbers", raw.dayNumbers ?? raw.days ?? raw["day-numbers"]],
@@ -208,7 +214,7 @@ function readColumns(value: unknown): BlockConfig["columns"] {
 /* "left" and "right" are what people reach for, but a tracker in a Persian
    note should sit at the start of the line, which is the right one. The
    physical names are taken and mapped for a left-to-right reader. */
-function readWrap(value: unknown): Wrap | undefined {
+function readSide(value: unknown): Side | undefined {
   const text = asString(value)?.trim().toLowerCase();
   if (!text) return undefined;
   if (text === "start" || text === "left") return "start";
@@ -263,7 +269,7 @@ export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): R
     totals: block.totals ?? settings.totals,
     streak: block.streak ?? settings.streak,
     size: clamp(block.size ?? settings.size, MIN_SIZE, MAX_SIZE),
-    wrap: block.wrap ?? settings.wrap,
+    side: block.side ?? settings.side,
     round: settings.round,
     alwaysShowControls: settings.alwaysShowControls,
     /* A grid with no rows would draw nothing at all, which reads as a broken
@@ -320,7 +326,8 @@ const KEY_ORDER: Array<keyof BlockConfig> = [
   "totals",
   "streak",
   "size",
-  "wrap",
+  "side",
+  "text",
 ];
 
 export function serializeConfig(config: BlockConfig): string {
@@ -373,7 +380,7 @@ export function pruneToDefaults(
     "totals",
     "streak",
     "size",
-    "wrap",
+    "side",
   ] as const;
 
   for (const key of sharedKeys) {
@@ -425,7 +432,7 @@ export function buildGroup(
 /* id and title are a tracker's own by definition; everything else can be
    said once for the whole row. */
 const SHAREABLE: Array<keyof BlockConfig> = KEY_ORDER.filter(
-  (key) => key !== "id" && key !== "title",
+  (key) => key !== "id" && key !== "title" && key !== "text",
 );
 
 function sameValue(a: unknown, b: unknown): boolean {

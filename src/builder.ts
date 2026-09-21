@@ -151,12 +151,17 @@ export class BuilderModal extends Modal {
 
     if (config.mode === "grid" && config.columns.kind === "days") {
       new Setting(form)
-        .setName("Break the month into weeks")
-        .setDesc("31 columns in one line needs a scrollbar. Weeks stack instead.")
-        .addToggle((toggle) =>
-          toggle
-            .setValue(config.band === "week")
-            .onChange((value) => this.update({ band: value ? "week" : "none" })),
+        .setName("A month of days")
+        .setDesc("31 in one line is wider than any note.")
+        .addDropdown((drop) =>
+          drop
+            .addOptions({
+              wrap: "Run on to the next line",
+              week: "Break at the weeks",
+              none: "One line, scrolled",
+            })
+            .setValue(config.band)
+            .onChange((value) => this.update({ band: value as BlockConfig["band"] })),
         );
     }
     if (config.columns.kind === "days") this.drawCalendarFields(form);

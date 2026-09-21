@@ -25,7 +25,7 @@ import {
   today,
   weekdayLabels,
 } from "./calendar";
-import type { BlockConfig, ResolvedConfig, Wrap } from "./config";
+import type { BlockConfig, ResolvedConfig } from "./config";
 import { MONTH_ROW_KEY } from "./store";
 import type { ValueSource } from "./values";
 
@@ -45,10 +45,11 @@ export interface TrackerDeps {
   unanchored?: boolean;
   /** Present only for a tracker standing in a row with others. */
   group?: GroupHandle;
+  /** Set when something shares the block with it and it has to make room. */
+  compact?: boolean;
 }
 
 export interface GroupHandle {
-  grab: (event: PointerEvent) => void;
   move: (by: number) => void;
   position: () => { index: number; count: number };
 }
@@ -101,11 +102,12 @@ export class TrackerView extends MarkdownRenderChild {
     return this.deps.values;
   }
 
-  /* A tracker standing in a row, or with text running past it, is a widget:
-     it should be as wide as the grid it shows and no wider. One that has a
-     band of the page to itself can spread its header out along it. */
+  /* A tracker sharing its block — with text, or with other trackers — is a
+     widget: as wide as the grid it shows and no wider, or there is nothing
+     left for whatever is beside it. One with the block to itself can spread
+     its header out along it. */
   private get isCompact(): boolean {
-    return Boolean(this.deps.group) || this.config.wrap !== "none";
+    return Boolean(this.deps.group) || Boolean(this.deps.compact);
   }
 
   private render(): void {
@@ -117,7 +119,7 @@ export class TrackerView extends MarkdownRenderChild {
     el.toggleClass("is-controls-visible", this.config.alwaysShowControls);
     el.dataset.mode = this.config.mode;
     el.dataset.cell = this.config.cell;
-    el.dataset.wrap = this.config.wrap;
+    el.dataset.side = this.config.side;
     el.toggleClass("is-compact", this.isCompact);
     /* Not --hb-cell directly: a coarse pointer raises the floor on this, and
        a value written into the style attribute would outrank that. */
@@ -208,7 +210,6 @@ export class TrackerView extends MarkdownRenderChild {
     }
 
     const tools = head.createDiv({ cls: "hb-tools" });
-    if (this.deps.group || this.deps.writeBlock) this.addGrip(tools);
     if (showsMonth) {
       this.addTool(tools, "chevron-left", "Previous month", () => this.stepMonth(-1), true);
       if (this.monthOffset !== 0) {
@@ -270,101 +271,6 @@ export class TrackerView extends MarkdownRenderChild {
   /* The grip is a button, not a bare handle: it has to be reachable and
      labelled even though what it is for — dragging — is not. The same move
      is in the menu for everyone who cannot drag. */
-  private addGrip(parent: HTMLElement): void {
-    const group = this.deps.group;
-    /* In a row the grip reorders. On its own it moves the tracker between
-       the three places a paragraph can hold one: start, end, or a band of
-       its own. Same gesture, same arrow keys; what moves is different
-       because there is something different to move. */
-    const label = group ? "Drag to reorder" : "Drag to place";
-
-    const button = parent.createEl("button", {
-      cls: "hb-tool hb-grip",
-      attr: { type: "button", "aria-label": label },
-    });
-    setIcon(button, "grip-vertical");
-    setTooltip(button, label, { placement: "top" });
-
-    button.addEventListener("pointerdown", (event) => {
-      if (group) group.grab(event);
-      else this.placeByDrag(event, button);
-    });
-    button.addEventListener("keydown", (event) => {
-      const by = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-      if (!by) return;
-      event.preventDefault();
-      if (group) group.move(by);
-      else this.nudgePlacement(by);
-    });
-  }
-
-  /* Three places, not coordinates. A note records what it is: text with a
-     tracker in it, on one side or across the width. Where the pointer lets
-     go decides which, measured against the column the text is set in. */
-  private placeByDrag(event: PointerEvent, handle: HTMLElement): void {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    handle.setPointerCapture(event.pointerId);
-
-    const root = this.containerEl;
-    const column = (root.offsetParent ?? root.parentElement) as HTMLElement | null;
-    const started = this.config.wrap;
-    let chosen = started;
-
-    const preview = (moveEvent: PointerEvent) => {
-      chosen = this.placementAt(moveEvent.clientX, column);
-      root.dataset.wrap = chosen;
-      root.addClass("is-placing");
-    };
-    const finish = (upEvent: PointerEvent) => {
-      handle.removeEventListener("pointermove", preview);
-      handle.removeEventListener("pointerup", finish);
-      handle.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("keydown", onKey);
-      if (handle.hasPointerCapture(upEvent.pointerId)) {
-        handle.releasePointerCapture(upEvent.pointerId);
-      }
-      root.removeClass("is-placing");
-      if (chosen !== started) this.savePlacement(chosen);
-      else root.dataset.wrap = started;
-    };
-    const cancel = () => {
-      chosen = started;
-      finish(event);
-    };
-    const onKey = (keyEvent: KeyboardEvent) => {
-      if (keyEvent.key === "Escape") cancel();
-    };
-
-    handle.addEventListener("pointermove", preview);
-    handle.addEventListener("pointerup", finish);
-    handle.addEventListener("pointercancel", cancel);
-    window.addEventListener("keydown", onKey);
-  }
-
-  private placementAt(x: number, column: HTMLElement | null): Wrap {
-    const box = column?.getBoundingClientRect();
-    if (!box || box.width === 0) return this.config.wrap;
-    const across = (x - box.left) / box.width;
-    const rtl = getComputedStyle(this.containerEl).direction === "rtl";
-    /* The outer thirds put the text beside it; the middle gives it a band of
-       its own. Mirrored for a right-to-left note, where the start is right. */
-    if (across < 0.33) return rtl ? "end" : "start";
-    if (across > 0.67) return rtl ? "start" : "end";
-    return "none";
-  }
-
-  private nudgePlacement(by: number): void {
-    const order: Wrap[] = ["start", "none", "end"];
-    const at = order.indexOf(this.config.wrap);
-    const next = order[Math.min(order.length - 1, Math.max(0, at + by))];
-    if (next !== this.config.wrap) this.savePlacement(next);
-  }
-
-  private savePlacement(wrap: Wrap): void {
-    void this.deps.writeBlock?.({ ...this.deps.block, wrap });
-  }
-
   private stepMonth(delta: number, reset = false): void {
     this.monthOffset = reset ? 0 : this.monthOffset + delta;
     this.render();
@@ -584,7 +490,7 @@ export class TrackerView extends MarkdownRenderChild {
 
   /* Click cycles up and wraps at the goal rather than climbing forever, so a
      mistake is always one more click from zero — the same way a checkbox is.
-     Typing + can still push a cell past its goal; the wrap starts from the
+     Typing + can still push a cell past its goal; the side starts from the
      goal in that case, so one click still brings it home. */
   private cycle(row: string, column: Column, backwards: boolean): void {
     const top = this.config.cell === "check" ? 1 : this.config.goal;
@@ -747,19 +653,22 @@ export class TrackerView extends MarkdownRenderChild {
       );
     }
 
-    if (!this.deps.group && this.deps.writeBlock) {
-      menu.addSeparator();
-      const places: Array<[Wrap, string, string]> = [
-        ["start", "Text to the side, tracker first", "panel-left"],
-        ["end", "Text to the side, tracker last", "panel-right"],
-        ["none", "A band of its own", "rows-3"],
-      ];
-      for (const [wrap, title, icon] of places) {
-        if (wrap === config.wrap) continue;
-        menu.addItem((item) =>
-          item.setTitle(title).setIcon(icon).onClick(() => this.savePlacement(wrap)),
-        );
-      }
+    /* Swapping sides is the one thing about the text worth a menu item —
+       the text itself is a paragraph, and paragraphs are edited in the
+       builder where there is room for them. */
+    if (this.deps.block.text?.trim() && this.deps.writeBlock) {
+      const toEnd = this.config.side !== "end";
+      menu.addItem((item) =>
+        item
+          .setTitle(toEnd ? "Put the text first" : "Put the tracker first")
+          .setIcon(toEnd ? "panel-right" : "panel-left")
+          .onClick(() => {
+            void this.deps.writeBlock?.({
+              ...this.deps.block,
+              side: toEnd ? "end" : "start",
+            });
+          }),
+      );
     }
 
     const group = this.deps.group;
@@ -776,6 +685,7 @@ export class TrackerView extends MarkdownRenderChild {
           item.setTitle("Move later").setIcon("arrow-right").onClick(() => group.move(1)),
         );
       }
+      void count;
     }
 
     menu.addSeparator();

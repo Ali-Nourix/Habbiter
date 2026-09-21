@@ -113,20 +113,13 @@ export class HabbiterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Where a tracker sits")
-      .setDesc(
-        "Floated, a tracker is only as wide as its grid and the text after it " +
-          "runs alongside. A heading starts a fresh band either way.",
-      )
+      .setName("Which side a tracker takes")
+      .setDesc("Only applies to a tracker whose block also carries text.")
       .addDropdown((drop) =>
         drop
-          .addOptions({
-            none: "A band of its own",
-            start: "Text to the side, tracker first",
-            end: "Text to the side, tracker last",
-          })
-          .setValue(this.settings.wrap)
-          .onChange((value) => this.save({ wrap: value as HabbiterSettings["wrap"] })),
+          .addOptions({ start: "Tracker first, text after", end: "Text first, tracker after" })
+          .setValue(this.settings.side === "end" ? "end" : "start")
+          .onChange((value) => this.save({ side: value as HabbiterSettings["side"] })),
       );
 
     new Setting(containerEl)

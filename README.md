@@ -100,36 +100,40 @@ columns: [Mon, Tue, Wed, Thu, Fri]
 
 ## Writing beside one
 
-By default a tracker takes a band across the note. Floated, it is only as
-wide and as tall as its own grid, and the text after it runs alongside:
+A block can carry text as well as a tracker, and the two sit side by side:
 
 ````markdown
 ```habbiter
 id: hb-n3f8
 title: Meditate
-wrap: start
 size: 22
+side: start
+text: |
+  Ten minutes, **before** coffee.
+
+  See [[Morning routine]] for the rest of it.
 ```
-Anything written after the block flows up the side of it and closes
-underneath, the way text flows past a figure.
 ````
 
-`wrap: start` puts the tracker where the line starts — the left in English,
-the right in Persian — and `wrap: end` puts it at the other side. A heading
-or a horizontal rule after it starts a fresh band, so a floated tracker
-never runs into the next section.
+The text is ordinary markdown, rendered by Obsidian — links, formatting and
+embeds all work. `side: start` puts the tracker where the line starts (the
+left in English, the right in Persian) and `side: end` puts it the other way
+round. Narrow the window enough and the two stack instead, so it still reads
+on a phone.
 
-Hover a tracker and **drag it by the grip** to place it: the outer thirds of
-the text column float it to that side, the middle gives it a band of its
-own, and Escape abandons the move. The same three are in **⋯**, and on the
-grip itself with ← and →.
+The easy way to write it is the builder: **⋯ → Edit tracker…** has a **Text
+beside it** box with the live preview above, and **⋯** on the tracker swaps
+the sides without opening anything.
 
-**What is still not on offer:** dropping a tracker at arbitrary x and y. It
-could be done — the block could carry an offset and the tracker could be
-shifted by it — but the offset would be measured against a column width that
-is different on your phone, in an export and in someone else's window, so it
-would land somewhere else every time. What a document can say durably is
-*which side*, so that is what is stored. For genuinely free positioning,
+**Why the text lives in the block.** The obvious way to do this is to float
+the block so the note's own paragraphs run past it, and that does not survive
+Live Preview: a floated block leaves the flow of the CodeMirror line holding
+it, the line measures as empty, and the editor comes apart. Inside the
+block's own container there is no editor to come apart, so what you see in
+the editor, in reading view, in an export and on a phone is the same thing.
+It was tried the other way round in 1.2.0 and taken out again.
+
+For a tracker positioned freely on a surface rather than set in a document,
 Obsidian's canvas is the place, and a tracker works in a canvas card like
 anything else.
 

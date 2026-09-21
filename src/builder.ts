@@ -9,7 +9,7 @@
    click in here is exactly what you are about to insert.
    ========================================================================== */
 
-import { Modal, Setting } from "obsidian";
+import { Component, MarkdownRenderer, Modal, Setting } from "obsidian";
 import type { App } from "obsidian";
 import { addDays, isoKey, monthLength, startOfMonth, today } from "./calendar";
 import {
@@ -49,6 +49,9 @@ const WEEKDAY_NAMES = [
 export class BuilderModal extends Modal {
   private draft: BlockConfig;
   private preview: TrackerView | null = null;
+  /* Owns whatever Obsidian renders into the preview, so a redraw takes the
+     last one apart instead of leaving its embeds running. */
+  private previewChild = new Component();
   private previewEl!: HTMLElement;
   private formEl!: HTMLElement;
 
@@ -76,6 +79,7 @@ export class BuilderModal extends Modal {
 
   override onClose(): void {
     this.preview?.unload();
+    this.previewChild.unload();
     this.contentEl.empty();
   }
 
@@ -248,18 +252,32 @@ export class BuilderModal extends Modal {
     }
 
     new Setting(form)
-      .setName("Where it sits")
-      .setDesc("Floated, the tracker is only as wide as its grid and text runs beside it.")
-      .addDropdown((drop) =>
+      .setName("Text beside it")
+      .setDesc("Markdown, set alongside the tracker. Leave it empty for no text.")
+      .addTextArea((area) => {
+        area
+          .setPlaceholder("What this habit is for, a link, anything.")
+          .setValue(this.draft.text ?? "")
+          .onChange((value) => {
+            const had = Boolean((this.draft.text ?? "").trim());
+            this.draft.text = value;
+            /* Only redraw the whole form when the side field has to appear
+               or disappear — otherwise the caret would jump out of here on
+               every keystroke. */
+            if (had === Boolean(value.trim())) this.drawPreview();
+            else this.update({});
+          });
+        area.inputEl.rows = 3;
+      });
+
+    if ((this.draft.text ?? "").trim()) {
+      new Setting(form).setName("Which side the tracker takes").addDropdown((drop) =>
         drop
-          .addOptions({
-            none: "A band of its own",
-            start: "Text to the side, tracker first",
-            end: "Text to the side, tracker last",
-          })
-          .setValue(config.wrap)
-          .onChange((value) => this.update({ wrap: value as BlockConfig["wrap"] })),
+          .addOptions({ start: "Tracker first, text after", end: "Text first, tracker after" })
+          .setValue(config.side === "end" ? "end" : "start")
+          .onChange((value) => this.update({ side: value as BlockConfig["side"] })),
       );
+    }
 
     new Setting(form)
       .setName("Totals")
@@ -323,17 +341,31 @@ export class BuilderModal extends Modal {
 
   private drawPreview(): void {
     this.preview?.unload();
+    this.previewChild.unload();
+    this.previewChild = new Component();
+    this.previewChild.load();
     this.previewEl.empty();
 
     const config = resolveConfig(this.draft, this.options.settings);
-    const host = this.previewEl.createDiv();
-    const view = new TrackerView(host, {
+    const text = (this.draft.text ?? "").trim();
+
+    const block = this.previewEl.createDiv({ cls: "hb-block" });
+    block.dataset.side = text ? config.side : "none";
+    const host = text ? block.createDiv({ cls: "hb-pair" }) : block;
+    const main = host.createDiv({ cls: "hb-main" });
+
+    const view = new TrackerView(main.createDiv(), {
       config,
       block: this.draft,
       values: this.sampleValues(config.mode, config.rows),
+      compact: Boolean(text),
     });
     view.load();
     this.preview = view;
+
+    if (!text) return;
+    const prose = host.createDiv({ cls: "hb-text markdown-rendered" });
+    void MarkdownRenderer.render(this.app, text, prose, "", this.previewChild);
   }
 
   /* A preview of an empty grid tells you nothing about how a full one reads,

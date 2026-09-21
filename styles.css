@@ -433,56 +433,44 @@
   box-shadow: inset 0 0 0 1px var(--hb-accent);
 }
 
-/* --- Where it sits in the text -------------------------------------------
-   A tracker is normally a band across the note. Floated, it is only as wide
-   and as tall as itself and the paragraphs after it run alongside — which is
-   the point: the box should be the size of the calendar, not of the page.
+/* --- The block, and the text beside it ----------------------------------
+   Two columns inside the block's own container, not a float on the block.
+   A float leaves the flow of the CodeMirror line that holds it in Live
+   Preview, the line measures as empty and the editor comes apart; a flex
+   row inside our own element has no editor to come apart. It also means
+   the text and the tracker stay together when the note is exported,
+   printed, or read on a phone, where they simply stack. */
 
-   Floated in both reading view and the editor. Obsidian's own snippets float
-   images and callouts in Live Preview, so a floated block widget is a road
-   already travelled; if it ever misbehaves there, `wrap: none` is one menu
-   item away and the tracker goes back to a band. */
+.hb-pair {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--bc-gap-5, 16px) var(--bc-gap-6, 24px);
+  flex-wrap: wrap;
+}
 
-.hb-root[data-wrap="start"],
-.hb-root[data-wrap="end"] {
-  margin-block: 0 var(--hb-gap-wide);
-  /* Text should not touch it. The block edge already has the note's own
-     margin, so only the side the words come from needs clearing. */
+.hb-block[data-side="end"] .hb-pair {
+  flex-direction: row-reverse;
+}
+
+.hb-main {
+  flex: 0 0 auto;
   max-inline-size: 100%;
 }
 
-.hb-root[data-wrap="start"] {
-  float: inline-start;
-  margin-inline-end: var(--bc-gap-5, 16px);
+/* The text takes what is left, and is allowed to be the thing that wraps
+   under: below about 14em of column there is no point setting prose beside
+   anything, so it goes under the tracker instead. */
+.hb-text {
+  flex: 1 1 14em;
+  min-inline-size: 0;
 }
 
-.hb-root[data-wrap="end"] {
-  float: inline-end;
-  margin-inline-start: var(--bc-gap-5, 16px);
+.hb-text > :first-child {
+  margin-block-start: 0;
 }
 
-/* A paragraph beside a tracker is the point; a heading beside one is not.
-   A heading or a rule after a floated tracker starts its own band, which is
-   what those elements are for. Anything else keeps flowing past. */
-.hb-root[data-wrap="start"] ~ :is(h1, h2, h3, h4, h5, h6, hr),
-.hb-root[data-wrap="end"] ~ :is(h1, h2, h3, h4, h5, h6, hr) {
-  clear: both;
-}
-
-/* While a placement is being chosen the tracker shows where it would land,
-   and says it is a preview rather than the answer. */
-.hb-root.is-placing {
-  opacity: 0.7;
-  outline: 1px dashed var(--hb-accent);
-  outline-offset: var(--hb-gap);
-}
-
-/* A floated tracker in a row of them would fight the row for the same
-   space; inside a group the placement is the row's, not each tracker's. */
-.hb-group .hb-root[data-wrap="start"],
-.hb-group .hb-root[data-wrap="end"] {
-  float: none;
-  margin-inline: 0;
+.hb-text > :last-child {
+  margin-block-end: 0;
 }
 
 /* --- A row of them --------------------------------------------------------
@@ -565,37 +553,6 @@
   margin-inline-start: 0;
   border-radius: var(--hb-radius-tool);
   background-color: var(--hb-page);
-}
-
-.hb-grip {
-  cursor: grab;
-  touch-action: none;
-}
-
-.hb-grip:active {
-  cursor: grabbing;
-}
-
-/* The dragged tracker is the one being moved, so it is the one that fades —
-   the row underneath it stays legible, because that is what is being aimed
-   at. */
-.hb-group-host.is-dragging {
-  user-select: none;
-  cursor: grabbing;
-}
-
-.hb-group-host.is-dragging .hb-slot {
-  transition: transform var(--bc-speed, 120ms) var(--bc-ease, ease);
-}
-
-.hb-slot.is-grabbed .hb-root {
-  opacity: 0.45;
-}
-
-/* While a row is being rearranged, every tracker shows its grip: the one you
-   are holding, and the gaps you can drop it into. */
-.hb-group-host.is-dragging .hb-tools {
-  opacity: 1;
 }
 
 /* --- Notices -------------------------------------------------------------- */

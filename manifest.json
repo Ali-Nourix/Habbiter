@@ -1,7 +1,7 @@
 {
   "id": "habbiter",
   "name": "Habbiter",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "minAppVersion": "1.5.0",
   "description": "Habit and tracker grids that live inside a note — a month calendar of checkboxes, or any grid of rows and columns you name yourself.",
   "author": "Nourix",

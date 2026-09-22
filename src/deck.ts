@@ -46,6 +46,19 @@ export class TrackerDeck extends MarkdownRenderChild {
 
     const count = this.deps.trackers.length;
 
+    /* Cards in a deck are all one card's worth of space — they share a grid
+       cell, so the box is the biggest of them and the rest are padded out to
+       it. A tracker drawn at 22px inside a box sized for one at 34px is a
+       small widget adrift in an empty card, which is what a deck of mixed
+       sizes looked like. So the deck picks one cell size and every card uses
+       it: the largest asked for, because growing to meet the others reads as
+       a deck and shrinking to them reads as a mistake.
+
+       Only what is drawn changes. Each tracker keeps its own size in the
+       block, so it is still its own size in a row, in the builder, and if it
+       is taken back out of the stack. */
+    const cell = Math.max(...this.deps.trackers.map((tracker) => tracker.deps.config.size));
+
     this.deps.trackers.forEach((tracker, index) => {
       const card = this.deckEl.createDiv({ cls: "hb-card" });
       card.setAttribute("role", "tabpanel");
@@ -57,6 +70,7 @@ export class TrackerDeck extends MarkdownRenderChild {
          sits at one end of a card half again as wide as it needs to be. */
       const view = new TrackerView(card.createDiv(), {
         ...tracker.deps,
+        config: { ...tracker.deps.config, size: cell },
         compact: true,
         /* Which card is in front is a swipe away; which card is on top of
            the stack is an order, and it is reordered the same way a row is. */

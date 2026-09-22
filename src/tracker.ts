@@ -27,9 +27,22 @@ import {
   today,
   weekdayLabels,
 } from "./calendar";
-import type { Band, BlockConfig, ResolvedConfig } from "./config";
+import type { Band, BlockConfig, Layout, ResolvedConfig } from "./config";
 import { MONTH_ROW_KEY } from "./store";
 import type { ValueSource } from "./values";
+
+/* What a tracker needs to know about the block it is in, so its menu can
+   offer the things that are the block's rather than its own. Stacking was
+   already possible before this and nobody found it: it lived in a builder
+   field that read as a no-op on a block with one tracker in it. A choice
+   about how several trackers sit belongs where the several trackers are. */
+export interface BlockShape {
+  /** How many trackers the block holds, this one counted. */
+  count: number;
+  layout: Layout;
+  /** Lays the whole block out the other way. */
+  setLayout: (layout: Layout) => void;
+}
 
 export interface TrackerDeps {
   config: ResolvedConfig;
@@ -41,8 +54,12 @@ export interface TrackerDeps {
   openBuilder?: () => void;
   /** Adds another tracker to this block, beside this one. */
   addBeside?: () => void;
+  /** Adds another tracker and stacks the block, putting it behind this one. */
+  addBehind?: () => void;
   /** Drops this tracker from the block. The ticks outlive it, under its id. */
   removeFromGroup?: () => void;
+  /** The block around this tracker: how many it holds, and how they sit. */
+  shape?: BlockShape;
   /** Set when the block has no id, so ticks are going nowhere durable. */
   unanchored?: boolean;
   /** Present only for a tracker standing in a row with others. */
@@ -765,7 +782,13 @@ export class TrackerView extends MarkdownRenderChild {
       );
     }
 
-    if (this.deps.addBeside) {
+    /* Adding and stacking are one decision taken twice, so they are next to
+       each other: a second tracker either stands beside this one or goes
+       behind it, and picking the second is the whole way into a deck. */
+    const shape = this.deps.shape;
+    const stacked = shape?.layout === "deck";
+
+    if (this.deps.addBeside && !stacked) {
       menu.addItem((item) =>
         item
           .setTitle("Add one beside this…")
@@ -774,10 +797,28 @@ export class TrackerView extends MarkdownRenderChild {
       );
     }
 
-    if (this.deps.group && this.deps.removeFromGroup) {
+    if (this.deps.addBehind) {
       menu.addItem((item) =>
         item
-          .setTitle("Take out of the row")
+          .setTitle(stacked ? "Add one to the stack…" : "Add one stacked behind this…")
+          .setIcon("layers")
+          .onClick(() => this.deps.addBehind?.()),
+      );
+    }
+
+    if (shape && shape.count > 1) {
+      menu.addItem((item) =>
+        item
+          .setTitle(stacked ? "Lay them out side by side" : "Stack them, one in front")
+          .setIcon(stacked ? "columns-2" : "layers")
+          .onClick(() => shape.setLayout(stacked ? "row" : "deck")),
+      );
+    }
+
+    if (this.deps.removeFromGroup && (shape?.count ?? 1) > 1) {
+      menu.addItem((item) =>
+        item
+          .setTitle(stacked ? "Take out of the stack" : "Take out of the row")
           .setIcon("trash-2")
           .onClick(() => this.deps.removeFromGroup?.()),
       );

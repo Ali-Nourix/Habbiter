@@ -268,8 +268,11 @@ export class BuilderModal extends Modal {
     }
 
     new Setting(form)
-      .setName("Several in one block")
-      .setDesc("Only applies where the block holds more than one tracker.")
+      .setName("When the block holds several")
+      .setDesc(
+        "Right-click a tracker in the note to add a second one, beside this " +
+          "or stacked behind it. This is the same choice, set in advance.",
+      )
       .addDropdown((drop) =>
         drop
           .addOptions({ row: "Side by side", deck: "Stacked, one in front" })

@@ -144,10 +144,13 @@ text: |
 ````
 
 The text is ordinary markdown, rendered by Obsidian — links, formatting and
-embeds all work. `side: start` puts the tracker where the line starts (the
-left in English, the right in Persian) and `side: end` puts it the other way
-round. Narrow the window enough and the two stack instead, so it still reads
-on a phone.
+embeds all work, set in the note's own font at the note's own size. `side:
+start` puts the tracker where the line starts (the left in English, the right
+in Persian) and `side: end` puts it the other way round.
+
+Beside means beside, at every width. The tracker's grid has a size it cannot
+go under, so the text column is the part that gives: narrow the pane and the
+text gets a narrower column rather than dropping underneath.
 
 The easy way to write it is the builder: **⋯ → Edit tracker…** has a **Text
 beside it** box with the live preview above, and **⋯** on the tracker swaps
@@ -193,12 +196,51 @@ you already have. **⋯ → Take out of the row** removes one again — its tick
 are filed under its `id`, not its position, so they are still there if you
 put it back.
 
-**Reordering.** Hover a tracker and drag it by the grip at the top. The row
-rearranges as you go and Escape puts it back. The order is written into the
-block, which is the only place a markdown file can keep one — so it survives
-closing the note, syncing, and anyone else opening it. The same move is in
-**⋯ → Move earlier / Move later**, and on the grip itself with ← and →,
-because a drag is no use from a keyboard.
+**Reordering.** **⋯ → Move earlier / Move later** on any tracker in the row.
+The order is written into the block, which is the only place a markdown file
+can keep one — so it survives closing the note, syncing, and anyone else
+opening it. A pointer drag was tried and taken out again: a tracker in Live
+Preview lives inside CodeMirror, which has its own claim on pointer events,
+and a gesture that works in a browser and not in the editor is worse than no
+gesture at all.
+
+## Stacked, one in front
+
+The other way a block can hold several: as a deck, with one card in front and
+the rest behind it.
+
+**⋯ → Add one stacked behind this…** on a tracker you already have. That one
+click does both things — it asks for the new tracker and it stacks the block.
+On a block that already holds a row, **⋯ → Stack them, one in front** puts
+them into a deck without adding anything, and **⋯ → Lay them out side by
+side** puts them back.
+
+Written out, it is one key:
+
+````markdown
+```habbiter
+calendar: persian
+layout: deck
+trackers:
+  - id: hb-k2p9
+    title: مدیتیشن
+  - id: hb-m4x1
+    title: مطالعه
+  - id: hb-q7v3
+    title: پیاده‌روی
+```
+````
+
+Swipe across the front card to bring the next one up. The swipe is never the
+only way: the arrows under the deck, the dots between them, and ← → on the
+dots all do the same job, because a pointer gesture inside CodeMirror is not
+something to bet the feature on. A tap stays a tap — a drag only starts once
+the pointer has travelled far enough, and further across than down, so
+ticking a box never turns into a swipe by accident.
+
+**⋯ → Move earlier / Move later** moves a card through the stack, and
+**⋯ → Take out of the stack** removes one. Only the front card takes clicks
+or Tab; the ones behind it are inert until they come forward.
 
 **What is not on offer:** dragging a tracker to an arbitrary spot on the
 page. A note is a markdown document, not a canvas: there is nowhere in it to

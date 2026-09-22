@@ -184,7 +184,7 @@ for (const sample of SAMPLES) {
       const card = deck.createDiv({ cls: "hb-card" });
       card.style.setProperty("--hb-depth", String(index));
       card.toggleClass("is-front", index === 0);
-      mount(card.createDiv(), block);
+      mount(card.createDiv(), block, false, true);
     });
     const bar = root.createDiv({ cls: "hb-deckbar" });
     bar.createEl("button", { cls: "hb-tool hb-deckstep is-nav", text: "‹" });

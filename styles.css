@@ -326,6 +326,8 @@
 .hb-deck {
   /* Signed, for the front card's travel. */
   --hb-swipe: 0;
+  /* How far below the front one each card behind it shows. */
+  --hb-peek: 10px;
   /* The same figure without its sign, for the cards rising behind it.
      CSS has abs(), and it is newer than the Electron some vaults are on,
      so the magnitude is worked out where the drag is. */
@@ -333,7 +335,7 @@
   display: grid;
   /* Room for the cards that show under the front one, and for the shadow
      that lifts it off them. */
-  padding: var(--hb-gap) var(--hb-gap-wide) calc(var(--hb-gap-wide) * 3);
+  padding: var(--hb-gap) var(--hb-gap-wide) calc(var(--hb-peek) * 3);
   touch-action: pan-y;
 }
 
@@ -358,11 +360,16 @@
   z-index: calc(20 - var(--hb-depth));
   transform:
     translateX(calc(var(--hb-swipe) * 100%))
-    translateY(calc(var(--hb-depth) * var(--hb-gap-wide)))
-    scale(calc(1 - var(--hb-depth) * 0.045))
+    translateY(calc(var(--hb-depth) * var(--hb-peek)))
+    scale(calc(1 - var(--hb-depth) * 0.04))
     rotate(calc(2deg * var(--hb-swipe)));
-  transform-origin: 50% 0;
-  opacity: calc(1 - var(--hb-depth) * 0.4);
+  /* The bottom edge. Scaling a card towards its top tucks it entirely
+     behind the front one, which is how a deck of equal-width cards ends up
+     looking like a single card; scaling towards the bottom leaves each one
+     showing by exactly how far it has been pushed down, whatever the cards
+     happen to be as tall as. */
+  transform-origin: 50% 100%;
+  opacity: calc(1 - var(--hb-depth) * 0.35);
   transition:
     transform 360ms var(--hb-ease-out),
     opacity 260ms var(--hb-ease-out);
@@ -374,9 +381,9 @@
    gesture feel like it is moving the stack rather than one card. */
 .hb-card:not(.is-front) {
   transform:
-    translateY(calc((var(--hb-depth) - var(--hb-pull)) * var(--hb-gap-wide)))
-    scale(calc(1 - (var(--hb-depth) - var(--hb-pull)) * 0.045));
-  opacity: calc(1 - (var(--hb-depth) - var(--hb-pull)) * 0.4);
+    translateY(calc((var(--hb-depth) - var(--hb-pull)) * var(--hb-peek)))
+    scale(calc(1 - (var(--hb-depth) - var(--hb-pull)) * 0.04));
+  opacity: calc(1 - (var(--hb-depth) - var(--hb-pull)) * 0.35);
 }
 
 /* Gone past, and on its way off. */

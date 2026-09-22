@@ -49,7 +49,11 @@ export class TrackerDeck extends MarkdownRenderChild {
       card.setAttribute("role", "tabpanel");
       this.cards.push(card);
 
-      const view = new TrackerView(card.createDiv(), tracker.deps);
+      /* A card is a widget: as wide as the grid it shows and no wider.
+         Without this the card takes the width of the tracker's header —
+         its title, its month and its streak on one line — and the calendar
+         sits at one end of a card half again as wide as it needs to be. */
+      const view = new TrackerView(card.createDiv(), { ...tracker.deps, compact: true });
       this.views.push(view);
       this.addChild(view);
     }

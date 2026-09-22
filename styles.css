@@ -338,6 +338,9 @@
    card and nothing jumps as you move through — a stack that resized itself
    at each card would be the note reflowing under your thumb.
 
+   The stack is a ring: depth counts round, so past the last card is the
+   first one and neither arrow is ever the one that does nothing.
+
    All the animation is one number. --hb-depth is how far behind the front a
    card is; --hb-swipe is how far the front one has been dragged, as a
    fraction of the deck's width. The transitions are on the card, so moving
@@ -430,7 +433,10 @@
   opacity: calc(1 - (var(--hb-depth) - var(--hb-pull)) * 0.35);
 }
 
-/* Gone past, and on its way off. */
+/* The one in front is the one being read, so it is the one lifted off the
+   rest. There is no card off the side of the deck any more: depth counts
+   round, so a card that leaves the front sinks to the bottom of the stack
+   rather than flying away and waiting there to be walked back to. */
 .hb-card.is-front {
   box-shadow:
     var(--shadow-l),
@@ -439,12 +445,6 @@
 
 .hb-card .hb-root {
   margin-block: 0;
-}
-
-.hb-card.is-gone {
-  transform: translateX(calc(var(--hb-depth) * 120%)) scale(0.94);
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Following a finger has to be immediate; the spring back is the same

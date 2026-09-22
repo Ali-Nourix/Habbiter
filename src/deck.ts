@@ -131,7 +131,17 @@ export class TrackerDeck extends MarkdownRenderChild {
     });
     setIcon(button, icon);
     setTooltip(button, label, { placement: "top" });
-    button.addEventListener("click", () => this.step(by * this.reading()));
+    /* Straight through, with no reading direction applied. These two say
+       Previous and Next, which are positions in the deck and not places on
+       the screen; the stylesheet mirrors their chevrons in a right-to-left
+       note and the flex row puts Next on the left, which is where later
+       already is there. Multiplying by the reading direction as well turned
+       the two flips back into one and had Next walking the deck backwards —
+       invisible while the ends were dead, obvious the moment they joined up.
+
+       The arrow keys on the dots and the swipe itself do take it: those are
+       spatial, and left in a right-to-left note is forward. */
+    button.addEventListener("click", () => this.step(by));
   }
 
   /** +1 where the text runs left to right, -1 where it runs the other way. */
@@ -141,8 +151,14 @@ export class TrackerDeck extends MarkdownRenderChild {
 
   /* --- Where each card sits ---------------------------------------------- */
 
+  /* The deck is a ring. Past the last card is the first one, before the first
+     is the last, and neither arrow is ever the one that does nothing — having
+     to walk all the way back through a stack to reach the card just behind
+     the one in front is the sort of thing a deck of cards does not ask of
+     anybody. */
   private goTo(index: number): void {
-    const next = Math.min(this.cards.length - 1, Math.max(0, index));
+    const count = this.cards.length;
+    const next = ((index % count) + count) % count;
     if (next === this.active) return;
     this.active = next;
     this.layOut();
@@ -164,15 +180,21 @@ export class TrackerDeck extends MarkdownRenderChild {
     await this.deps.reorder?.(order);
   }
 
-  /* Depth is all the styling needs: how far behind the front a card is, and
-     whether it has been gone past. The transitions are on the cards, so
-     setting a number here is the whole animation. */
+  /* Depth is all the styling needs: how far behind the front a card is. The
+     transitions are on the cards, so setting a number here is the whole
+     animation.
+
+     It counts round rather than up and down, which is what makes the ring a
+     ring: the card you just left is not off to one side waiting to be walked
+     back to, it is at the bottom of the stack, and one more step in the same
+     direction brings it round to the front again. */
   private layOut(): void {
+    const count = this.cards.length;
+
     this.cards.forEach((card, index) => {
-      const depth = index - this.active;
+      const depth = (index - this.active + count) % count;
       card.style.setProperty("--hb-depth", String(depth));
       card.toggleClass("is-front", depth === 0);
-      card.toggleClass("is-gone", depth < 0);
       /* Only the front card is reachable — by pointer, by tab, by a screen
          reader. inert says all three at once. */
       card.toggleAttribute("inert", depth !== 0);

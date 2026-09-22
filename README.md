@@ -245,6 +245,12 @@ something to bet the feature on. A tap stays a tap — a drag only starts once
 the pointer has travelled far enough, and further across than down, so
 ticking a box never turns into a swipe by accident.
 
+The stack is a ring. Past the last card is the first one, before the first is
+the last, and neither arrow is ever the one that does nothing — so getting to
+the card behind the one in front is one press backwards, not a walk all the
+way round. A card that leaves the front sinks to the bottom of the stack
+rather than off the side of the deck.
+
 **⋯ → Move earlier / Move later** moves a card through the stack, and
 **⋯ → Take out of the stack** removes one. Only the front card takes clicks
 or Tab; the ones behind it are inert until they come forward.

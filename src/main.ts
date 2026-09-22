@@ -22,7 +22,7 @@ import {
 } from "./config";
 import { fenceLines, findFence } from "./fence";
 import type { FenceMatch } from "./fence";
-import type { BlockConfig, BlockDocument } from "./config";
+import type { BlockConfig, BlockDocument, Layout } from "./config";
 import { TrackerBlock } from "./block";
 import { HabbiterSettingTab } from "./settings-tab";
 import { Store } from "./store";
@@ -127,6 +127,16 @@ export default class HabbiterPlugin extends Plugin {
       unanchored: !tracker.id,
     }));
 
+    /* The layout is the block's, so every tracker in it is told the same
+       thing: how many there are, how they sit, and how to change that.
+       Stacking used to be reachable only through a builder field that read
+       as a no-op until a block already had two trackers in it. */
+    const shape = {
+      count: anchored.length,
+      layout: resolveConfig(doc.shared, this.store.settings).layout,
+      setLayout: (layout: Layout) => void this.setBlockLayout(handle, layout),
+    };
+
     const mounted = anchored.map(({ tracker, index, id, unanchored }) => {
       const block: BlockConfig = { ...tracker, id };
       return {
@@ -138,8 +148,10 @@ export default class HabbiterPlugin extends Plugin {
           values: new StoreValues(this.store, id),
           writeBlock: (next: BlockConfig) => this.writeTracker(handle, index, next),
           openBuilder: () => this.openBuilderForEdit(handle, index, block),
-          addBeside: () => this.openBuilderForAdd(handle, index),
+          addBeside: () => this.openBuilderForAdd(handle, index, "row"),
+          addBehind: () => this.openBuilderForAdd(handle, index, "deck"),
           removeFromGroup: () => void this.removeTracker(handle, index),
+          shape,
           unanchored,
         },
       };
@@ -265,8 +277,11 @@ export default class HabbiterPlugin extends Plugin {
   }
 
   /* Added after the one it was asked for, not at the end: "beside this" is
-     a position, and a row of eight is where that starts to matter. */
-  private openBuilderForAdd(handle: BlockHandle, index: number): void {
+     a position, and a row of eight is where that starts to matter. The
+     layout comes with it, because "add one behind this" is a sentence about
+     both — asking for the second tracker and asking for a stack are the
+     same click. */
+  private openBuilderForAdd(handle: BlockHandle, index: number, layout: Layout): void {
     new BuilderModal(this.app, {
       settings: this.store.settings,
       initial: { id: newTrackerId() },
@@ -274,11 +289,22 @@ export default class HabbiterPlugin extends Plugin {
       onSubmit: (config) => {
         const trackers = trackersOf(handle.doc);
         trackers.splice(index + 1, 0, config);
-        void handle.write(buildGroup(trackers, this.store.settings)).then((ok) => {
+        const next = trackers.map((tracker) => ({ ...tracker, layout }));
+        void handle.write(buildGroup(next, this.store.settings)).then((ok) => {
           if (!ok) new Notice("Habbiter could not find this block to add to it.");
         });
       },
     }).open();
+  }
+
+  /* One layout for the whole block. It is written on to every tracker and
+     buildGroup lifts it back out to the top of the fence, which is where a
+     choice they all share belongs — the alternative is a block that says
+     "deck" three times and disagrees with itself the day one is edited. */
+  private async setBlockLayout(handle: BlockHandle, layout: Layout): Promise<void> {
+    const trackers = trackersOf(handle.doc).map((tracker) => ({ ...tracker, layout }));
+    const ok = await handle.write(buildGroup(trackers, this.store.settings));
+    if (!ok) new Notice("Habbiter could not find this block to change it.");
   }
 
   /* The ticks are keyed by the tracker's id, not by its place in a block, so

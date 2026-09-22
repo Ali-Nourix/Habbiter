@@ -442,9 +442,17 @@ export function buildGroup(
     }
   }
 
+  /* The text belongs to the block, not to a tracker in it, and the block is
+     where it is read back from. Without this a tracker that had text under
+     it lost it the moment a second tracker joined the block: the text went
+     into that tracker's entry, and nothing looks for it there. */
+  const text = trackers.map((tracker) => tracker.text).find((value) => value?.trim());
+  if (text !== undefined) shared.text = text;
+
   const group = trackers.map((tracker) => {
     const entry: BlockConfig = {};
     for (const key of KEY_ORDER) {
+      if (key === "text") continue;
       const value = tracker[key];
       if (value === undefined) continue;
       if (key !== "id" && sameValue(shared[key], value)) continue;

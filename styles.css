@@ -51,6 +51,20 @@
   --hb-cell: var(--hb-size);
   --hb-fill: 0;
 
+  /* The whole point. Whatever the block is sitting in stays visible. */
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* --- The tracker itself ---------------------------------------------------
+   Everything below is the tracker's, not the block's. It has to be a rule of
+   its own: the block wraps the tracker AND the note text set beside it, so a
+   UI font or a fit-content width declared up there reaches the prose too —
+   which is how a paragraph beside a tracker ended up 12px in the interface
+   font, in a column narrow enough to fall underneath. */
+
+.hb-root {
   font-family: var(--font-interface);
   font-size: var(--font-ui-smaller, 12px);
   line-height: 1.35;
@@ -62,11 +76,6 @@
      from the grid it is counting. */
   inline-size: fit-content;
   max-inline-size: 100%;
-
-  /* The whole point. Whatever the block is sitting in stays visible. */
-  background: none;
-  border: none;
-  box-shadow: none;
 }
 
 .hb-root.is-round {
@@ -171,7 +180,8 @@
    The hit size itself still comes from the theme's own token, so a tracker's
    buttons stay the same square as the rest of the app's. */
 
-.hb-root button.hb-tool {
+.hb-root button.hb-tool,
+.hb-block button.hb-tool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -315,12 +325,19 @@
    fraction of the deck's width. The transitions are on the card, so moving
    the deck is setting a number and letting the compositor do the rest. */
 
+/* The deck's own chrome sits beside the cards, not inside any one of them,
+   so it has to say what it is set in. A tracker is chrome and states this on
+   .hb-root; the bar under the cards is chrome too and is nowhere near it. */
 .hb-deckroot {
   display: flex;
   flex-direction: column;
   gap: var(--hb-gap-wide);
   inline-size: fit-content;
   max-inline-size: 100%;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-smaller, 12px);
+  line-height: 1.35;
+  color: var(--hb-ink);
 }
 
 .hb-deck {
@@ -754,13 +771,24 @@
      what makes the two look like they start on the same line. */
   align-items: baseline;
   gap: var(--bc-gap-5, 16px) var(--bc-gap-6, 24px);
-  flex-wrap: wrap;
+
+  /* Beside, always — never above or below. Wrapping was the polite thing to
+     do on a narrow pane and it is not what "beside" means: the text dropped
+     under the tracker and the pair stopped reading as one thing. The text
+     column takes whatever is left and is free to become narrow instead. */
+  flex-wrap: nowrap;
 }
 
 /* A tracker on its own has air above it. One set beside a paragraph starts
-   where the paragraph starts, and that margin is 8px of the drift. */
+   where the paragraph starts, and that margin is 8px of the drift — so the
+   air belongs to the pair, which has both of them in it, rather than to one
+   of the two columns. */
+.hb-pair {
+  margin-block: var(--hb-gap-wide);
+}
+
 .hb-pair .hb-root {
-  margin-block-start: 0;
+  margin-block: 0;
 }
 
 .hb-block[data-side="end"] .hb-pair {
@@ -772,12 +800,19 @@
   max-inline-size: 100%;
 }
 
-/* The text takes what is left, and is allowed to be the thing that wraps
-   under: below about 14em of column there is no point setting prose beside
-   anything, so it goes under the tracker instead. */
+/* The text takes what is left of the line, down to nothing — it is the part
+   that gives, because the tracker's grid has a width it cannot go under.
+
+   It also states its own typography rather than inheriting it. The tracker
+   is chrome and is set in the interface font at 12px; the paragraph beside
+   it is note text and has to read as the rest of the note does. */
 .hb-text {
-  flex: 1 1 14em;
+  flex: 1 1 0;
   min-inline-size: 0;
+  font-family: var(--font-text);
+  font-size: var(--font-text-size);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
 }
 
 .hb-text > :first-child {

@@ -44,7 +44,9 @@ export class TrackerDeck extends MarkdownRenderChild {
     const root = this.containerEl.createDiv({ cls: "hb-deckroot" });
     this.deckEl = root.createDiv({ cls: "hb-deck" });
 
-    for (const tracker of this.deps.trackers) {
+    const count = this.deps.trackers.length;
+
+    this.deps.trackers.forEach((tracker, index) => {
       const card = this.deckEl.createDiv({ cls: "hb-card" });
       card.setAttribute("role", "tabpanel");
       this.cards.push(card);
@@ -53,10 +55,18 @@ export class TrackerDeck extends MarkdownRenderChild {
          Without this the card takes the width of the tracker's header —
          its title, its month and its streak on one line — and the calendar
          sits at one end of a card half again as wide as it needs to be. */
-      const view = new TrackerView(card.createDiv(), { ...tracker.deps, compact: true });
+      const view = new TrackerView(card.createDiv(), {
+        ...tracker.deps,
+        compact: true,
+        /* Which card is in front is a swipe away; which card is on top of
+           the stack is an order, and it is reordered the same way a row is. */
+        group: this.deps.reorder
+          ? { move: (by) => void this.move(index, by), position: () => ({ index, count }) }
+          : undefined,
+      });
       this.views.push(view);
       this.addChild(view);
-    }
+    });
 
     this.buildControls(root);
     this.layOut();
@@ -126,6 +136,18 @@ export class TrackerDeck extends MarkdownRenderChild {
 
   private step(by: number): void {
     this.goTo(this.active + by);
+  }
+
+  /* Moving a card through the stack, from the menu. The block is the record,
+     so this writes it and lets the re-render put the cards in their new
+     order — there is no second copy of the order to fall out of step. */
+  private async move(from: number, by: number): Promise<void> {
+    const to = from + by;
+    if (to < 0 || to >= this.cards.length) return;
+    const order = [...Array(this.cards.length).keys()];
+    const [moved] = order.splice(from, 1);
+    order.splice(to, 0, moved);
+    await this.deps.reorder?.(order);
   }
 
   /* Depth is all the styling needs: how far behind the front a card is, and

@@ -123,7 +123,9 @@ ok(
   !textFence.split("\n").slice(1, -1).some((line) => line.startsWith("```")),
 );
 
-/* Text belongs to the block, not to one tracker in a row. */
+/* Text belongs to the block, not to one tracker in a row — and the block is
+   the only place anything reads it back from. A tracker that had text under
+   it used to lose it the moment a second tracker joined the block. */
 const rowWithText = buildGroup(
   [
     { id: "r1", title: "A", text: PROSE },
@@ -131,7 +133,37 @@ const rowWithText = buildGroup(
   ],
   DEFAULT_SETTINGS,
 );
-ok("text is never folded into the shared options", rowWithText.shared.text === undefined);
+check("the row's text is the block's", rowWithText.shared.text, PROSE);
+ok(
+  "and no entry repeats it",
+  (rowWithText.group ?? []).every((entry) => entry.text === undefined),
+);
+
+const joinedLater = buildGroup(
+  [{ id: "j1", title: "A", text: PROSE }, { id: "j2", title: "B" }],
+  DEFAULT_SETTINGS,
+);
+check("a tracker joining a block with text keeps it", joinedLater.shared.text, PROSE);
+
+/* Stacking is written on every tracker and lifted back to the top of the
+   fence, so the block states it once and cannot disagree with itself. */
+const stacked = buildGroup(
+  [
+    { id: "s1", title: "A", layout: "deck" },
+    { id: "s2", title: "B", layout: "deck" },
+  ],
+  DEFAULT_SETTINGS,
+);
+check("a stacked block says so once", stacked.shared.layout, "deck");
+ok(
+  "and not once per tracker",
+  (stacked.group ?? []).every((entry) => entry.layout === undefined),
+);
+check(
+  "and the fence it writes parses back to a deck",
+  parseBlock(toCodeBlock(stacked).split("\n").slice(1, -1).join("\n")).doc.shared.layout,
+  "deck",
+);
 
 /* --- Which side ---------------------------------------------------------
    "left" and "right" are what people type; a tracker in a Persian note

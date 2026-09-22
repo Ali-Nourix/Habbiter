@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import type { CalendarSystem, Numerals } from "./calendar";
-import type { Band, CellKind, Mode, Side } from "./config";
+import type { Band, CellKind, Layout, Mode, Side } from "./config";
 
 export interface HabbiterSettings {
   mode: Mode;
@@ -28,6 +28,8 @@ export interface HabbiterSettings {
   band: Band;
   /** Which side a tracker takes when its block also carries text. */
   side: Side;
+  /** Several trackers in one block: side by side, or a deck to swipe. */
+  layout: Layout;
   /** Round cells instead of following the theme's checkbox corner. */
   round: boolean;
   /** Keep the header controls visible instead of summoning them on hover. */
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: HabbiterSettings = {
   size: 26,
   band: "wrap",
   side: "start",
+  layout: "row",
   round: false,
   alwaysShowControls: false,
 };

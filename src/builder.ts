@@ -268,6 +268,16 @@ export class BuilderModal extends Modal {
     }
 
     new Setting(form)
+      .setName("Several in one block")
+      .setDesc("Only applies where the block holds more than one tracker.")
+      .addDropdown((drop) =>
+        drop
+          .addOptions({ row: "Side by side", deck: "Stacked, one in front" })
+          .setValue(config.layout)
+          .onChange((value) => this.update({ layout: value as BlockConfig["layout"] })),
+      );
+
+    new Setting(form)
       .setName("Text beside it")
       .setDesc("Markdown, set alongside the tracker. Leave it empty for no text.")
       .addTextArea((area) => {

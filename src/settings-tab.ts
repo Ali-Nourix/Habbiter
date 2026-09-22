@@ -131,6 +131,19 @@ export class HabbiterSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Several trackers in one block")
+      .setDesc(
+        "Side by side they are all visible at once. Stacked, one is in front " +
+          "and you swipe across it, or use the arrows and the dots under it.",
+      )
+      .addDropdown((drop) =>
+        drop
+          .addOptions({ row: "Side by side", deck: "Stacked, one in front" })
+          .setValue(this.settings.layout)
+          .onChange((value) => this.save({ layout: value as HabbiterSettings["layout"] })),
+      );
+
+    new Setting(containerEl)
       .setName("Which side a tracker takes")
       .setDesc("Only applies to a tracker whose block also carries text.")
       .addDropdown((drop) =>

@@ -231,6 +231,13 @@ trackers:
 ```
 ````
 
+Cards in a deck share one space, so every card is as big as the biggest of
+them. That means the deck draws every tracker at one cell size — the largest
+any of them asks for — so a stack of calendars comes out as a stack of
+matching cards rather than a small one adrift in a box built for a large one.
+Each tracker keeps its own size in the block, so it is its own size again in
+a row, in the builder, and if it is taken back out of the stack.
+
 Swipe across the front card to bring the next one up. The swipe is never the
 only way: the arrows under the deck, the dots between them, and ← → on the
 dots all do the same job, because a pointer gesture inside CodeMirror is not

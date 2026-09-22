@@ -49,12 +49,27 @@ HTMLElement.prototype.empty = function () {
 export class Component {
   constructor() {
     this.cleanups = [];
+    this.children = [];
+    this.loaded = false;
   }
   load() {
+    if (this.loaded) return;
+    this.loaded = true;
     this.onload?.();
+    for (const child of this.children) child.load();
   }
   unload() {
+    for (const child of this.children) child.unload();
     for (const cleanup of this.cleanups) cleanup();
+  }
+  /* A parent that is already loaded loads the child as it takes it, which is
+     what Obsidian does and what the deck and the row rely on: they build
+     their views inside onload and hand them over. Without it the harness
+     draws an empty deck and the thing under test never runs. */
+  addChild(child) {
+    this.children.push(child);
+    if (this.loaded) child.load();
+    return child;
   }
   register(cleanup) {
     this.cleanups.push(cleanup);

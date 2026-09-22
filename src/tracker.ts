@@ -498,6 +498,9 @@ export class TrackerView extends MarkdownRenderChild {
 
     const named = this.rows.some((row) => row !== "");
     grid.toggleClass("has-labels", named);
+    /* The stylesheet needs to know whether there are any, not just how many:
+       a track list asking to repeat none of something is invalid CSS. */
+    grid.toggleClass("has-stats", stats.length > 0);
 
     /* Day columns follow the calendar's own "show weekday names" switch;
        columns the author named have no header at all without their names. */

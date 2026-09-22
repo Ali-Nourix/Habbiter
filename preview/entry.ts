@@ -6,6 +6,8 @@ import { resolveConfig } from "../src/config";
 import type { BlockConfig } from "../src/config";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import { MONTH_ROW_KEY } from "../src/store";
+import { TrackerDeck } from "../src/deck";
+import { TrackerGroup } from "../src/group";
 import { TrackerView } from "../src/tracker";
 import { MemoryValues } from "../src/values";
 import { addDays, isoKey, monthLength, startOfMonth, today } from "../src/calendar";
@@ -91,7 +93,7 @@ const SAMPLES: Sample[] = [
     block: { id: "w3", title: "Walk", size: 22 },
   },
   {
-    caption: "A row of them in one block — drag by the grip to reorder",
+    caption: "A row of them in one block — ⋯ moves one earlier or later",
     row: [
       { id: "g1", title: "Meditate", size: 22 },
       { id: "g2", title: "Read", size: 22 },
@@ -99,14 +101,31 @@ const SAMPLES: Sample[] = [
     ],
   },
   {
-    caption: "A deck — stacked, swipe across the front one",
+    /* Deliberately mixed sizes. Cards share a grid cell, so they are all as
+       big as the biggest — a deck that drew each tracker at its own size put
+       a small one adrift in a card built for a large one. */
+    caption: "A deck — stacked, swipe across the front one, sizes mixed",
     row: [
-      { id: "d1", title: "مدیتیشن", calendar: "persian", size: 24 },
-      { id: "d2", title: "مطالعه", calendar: "persian", size: 24 },
-      { id: "d3", title: "ورزش", calendar: "persian", size: 24 },
+      { id: "d1", title: "مدیتیشن", calendar: "persian", size: 22 },
+      { id: "d2", title: "مطالعه", calendar: "persian", size: 30 },
+      { id: "d3", title: "ورزش", calendar: "persian", size: 26 },
     ],
     deck: true,
     rtl: true,
+  },
+  {
+    /* Totals off, which is the default. This is the shape that used to come
+       out as a single column fifteen cells tall: the track list asked to
+       repeat none of something, which is invalid and took the whole of
+       grid-template-columns with it. */
+    caption: "Grid — named columns, no totals",
+    block: {
+      id: "n1",
+      title: "Morning",
+      mode: "grid",
+      rows: ["Meditate", "Read", "Walk"],
+      columns: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    },
   },
   {
     caption: "A row on the Persian calendar",
@@ -153,6 +172,17 @@ function sampleValues(block: BlockConfig, rows: string[], goal: number): MemoryV
 
 const root = document.getElementById("samples") as HTMLElement;
 
+/* What a group or a deck is handed for each tracker it holds. */
+function trackerDeps(block: BlockConfig) {
+  const config = resolveConfig(block, DEFAULT_SETTINGS);
+  const deps = {
+    config,
+    block,
+    values: sampleValues(block, config.rows, config.cell === "count" ? config.goal : 1),
+  };
+  return { config, block, deps };
+}
+
 function mount(host: HTMLElement, block: BlockConfig, group?: boolean, compact?: boolean): void {
   const config = resolveConfig(block, DEFAULT_SETTINGS);
   if (block.id === "b") config.round = true;
@@ -174,30 +204,17 @@ for (const sample of SAMPLES) {
   const host = figure.createDiv();
   if (sample.rtl) host.setAttribute("dir", "rtl");
 
-  if (sample.row && sample.deck) {
-    /* The same shape deck.ts builds: cards in one grid cell, depth as a
-       number on each. The harness sets the numbers; the plugin sets them
-       from where the swipe got to. */
-    const root = host.createDiv({ cls: "hb-block" }).createDiv({ cls: "hb-deckroot" });
-    const deck = root.createDiv({ cls: "hb-deck" });
-    sample.row.forEach((block, index) => {
-      const card = deck.createDiv({ cls: "hb-card" });
-      card.style.setProperty("--hb-depth", String(index));
-      card.toggleClass("is-front", index === 0);
-      mount(card.createDiv(), block, false, true);
-    });
-    const bar = root.createDiv({ cls: "hb-deckbar" });
-    bar.createEl("button", { cls: "hb-tool hb-deckstep is-nav", text: "‹" });
-    const dots = bar.createDiv({ cls: "hb-dots" });
-    sample.row.forEach((_, index) => {
-      dots.createEl("button", { cls: index === 0 ? "hb-dot is-active" : "hb-dot" });
-    });
-    bar.createEl("button", { cls: "hb-tool hb-deckstep is-nav", text: "›" });
-  } else if (sample.row) {
-    const row = host.createDiv({ cls: "hb-group" });
-    for (const block of sample.row) {
-      mount(row.createDiv({ cls: "hb-slot" }).createDiv(), block, true);
-    }
+  if (sample.row) {
+    /* The real TrackerDeck and TrackerGroup, not a hand-built copy of the
+       markup they emit. The copy is why a deck of mixed sizes looked right
+       here and wrong in a note: it set the depth numbers itself and never
+       ran the code that decides how big a card's tracker is drawn. */
+    const block = host.createDiv({ cls: "hb-block" });
+    const deps = { trackers: sample.row.map(trackerDeps) };
+    const view = sample.deck
+      ? new TrackerDeck(block.createDiv(), deps)
+      : new TrackerGroup(block.createDiv(), deps);
+    view.load();
   } else if (sample.block) {
     /* The same shape block.ts builds: the block's own two columns, not a
        float on the note. The harness stands in for Obsidian's markdown

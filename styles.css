@@ -237,11 +237,17 @@
   justify-content: start;
 }
 
+/* The four shapes are spelled out rather than folded into one template with
+   a repeat() that might be asked for none. repeat(0, max-content) is not a
+   zero-width track, it is a parse error, and it takes the whole
+   grid-template-columns down with it: the property falls back to `none`,
+   every cell lands in one implicit column, and a five-by-three grid comes
+   out as a single strip fifteen cells tall. Totals are off by default, so
+   that was every grid nobody had switched them on for. */
+
 .hb-grid {
   display: grid;
-  grid-template-columns:
-    repeat(var(--hb-cols), var(--hb-cell))
-    repeat(var(--hb-stats), max-content);
+  grid-template-columns: repeat(var(--hb-cols), var(--hb-cell));
   gap: var(--hb-gap);
   align-items: center;
   justify-content: start;
@@ -249,6 +255,18 @@
 }
 
 .hb-grid.has-labels {
+  grid-template-columns:
+    [labels] max-content
+    repeat(var(--hb-cols), var(--hb-cell));
+}
+
+.hb-grid.has-stats {
+  grid-template-columns:
+    repeat(var(--hb-cols), var(--hb-cell))
+    repeat(var(--hb-stats), max-content);
+}
+
+.hb-grid.has-labels.has-stats {
   grid-template-columns:
     [labels] max-content
     repeat(var(--hb-cols), var(--hb-cell))
@@ -364,6 +382,15 @@
    else that floats in the vault does. */
 .hb-card {
   grid-area: 1 / 1;
+  /* Cards share a grid cell, so every one of them is as big as the biggest.
+     The deck draws them all at one cell size, which settles it for a stack of
+     calendars; a stack mixing a calendar with a short grid still has one card
+     with room to spare, and a tracker centred in that room reads as a card
+     with something on it rather than as a widget that missed its corner. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   padding: var(--bc-gap-5, 16px);
   border-radius: var(--bc-pane-radius, var(--radius-l, 8px));
   background-color: var(--hb-page);

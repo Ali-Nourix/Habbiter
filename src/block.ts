@@ -18,6 +18,7 @@
 import { MarkdownRenderChild, MarkdownRenderer } from "obsidian";
 import type { App } from "obsidian";
 import type { ResolvedConfig } from "./config";
+import { TrackerDeck } from "./deck";
 import { TrackerGroup } from "./group";
 import type { GroupDeps } from "./group";
 import { TrackerView } from "./tracker";
@@ -29,6 +30,8 @@ export interface BlockDeps extends GroupDeps {
   text: string;
   /** Which side the trackers take. Only meaningful when there is text. */
   side: ResolvedConfig["side"];
+  /** Several trackers: beside each other, or stacked into a deck. */
+  layout: ResolvedConfig["layout"];
 }
 
 export class TrackerBlock extends MarkdownRenderChild {
@@ -43,7 +46,7 @@ export class TrackerBlock extends MarkdownRenderChild {
   }
 
   override onload(): void {
-    const { app, sourcePath, text, side, trackers } = this.deps;
+    const { app, sourcePath, text, side, layout, trackers } = this.deps;
     const el = this.containerEl;
     el.addClass("hb-block");
 
@@ -57,6 +60,10 @@ export class TrackerBlock extends MarkdownRenderChild {
       const view = new TrackerView(host.createDiv(), { ...trackers[0].deps, compact: hasText });
       this.views.push(view);
       this.addChild(view);
+    } else if (layout === "deck") {
+      const deck = new TrackerDeck(host, this.deps);
+      this.views.push(...deck.build());
+      this.addChild(deck);
     } else {
       const group = new TrackerGroup(host, this.deps);
       this.views.push(...group.build());

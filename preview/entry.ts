@@ -20,6 +20,8 @@ const PROSE =
 
 interface Sample {
   caption: string;
+  /** Renders the row as a deck instead: stacked, one in front. */
+  deck?: boolean;
   block?: BlockConfig;
   /** Prose after the tracker, to show what a float actually does to it. */
   prose?: boolean;
@@ -97,6 +99,16 @@ const SAMPLES: Sample[] = [
     ],
   },
   {
+    caption: "A deck — stacked, swipe across the front one",
+    row: [
+      { id: "d1", title: "مدیتیشن", calendar: "persian", size: 24 },
+      { id: "d2", title: "مطالعه", calendar: "persian", size: 24 },
+      { id: "d3", title: "ورزش", calendar: "persian", size: 24 },
+    ],
+    deck: true,
+    rtl: true,
+  },
+  {
     caption: "A row on the Persian calendar",
     row: [
       { id: "g4", title: "ورزش", calendar: "persian", size: 22 },
@@ -162,7 +174,26 @@ for (const sample of SAMPLES) {
   const host = figure.createDiv();
   if (sample.rtl) host.setAttribute("dir", "rtl");
 
-  if (sample.row) {
+  if (sample.row && sample.deck) {
+    /* The same shape deck.ts builds: cards in one grid cell, depth as a
+       number on each. The harness sets the numbers; the plugin sets them
+       from where the swipe got to. */
+    const root = host.createDiv({ cls: "hb-block" }).createDiv({ cls: "hb-deckroot" });
+    const deck = root.createDiv({ cls: "hb-deck" });
+    sample.row.forEach((block, index) => {
+      const card = deck.createDiv({ cls: "hb-card" });
+      card.style.setProperty("--hb-depth", String(index));
+      card.toggleClass("is-front", index === 0);
+      mount(card.createDiv(), block, false, true);
+    });
+    const bar = root.createDiv({ cls: "hb-deckbar" });
+    bar.createEl("button", { cls: "hb-tool hb-deckstep is-nav", text: "‹" });
+    const dots = bar.createDiv({ cls: "hb-dots" });
+    sample.row.forEach((_, index) => {
+      dots.createEl("button", { cls: index === 0 ? "hb-dot is-active" : "hb-dot" });
+    });
+    bar.createEl("button", { cls: "hb-tool hb-deckstep is-nav", text: "›" });
+  } else if (sample.row) {
     const row = host.createDiv({ cls: "hb-group" });
     for (const block of sample.row) {
       mount(row.createDiv({ cls: "hb-slot" }).createDiv(), block, true);

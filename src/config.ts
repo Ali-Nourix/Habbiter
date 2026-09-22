@@ -20,6 +20,8 @@ export type Mode = "month" | "grid";
 export type CellKind = "check" | "count";
 /** Which side the trackers take when the block also carries text. */
 export type Side = "none" | "start" | "end";
+/** Several trackers in one block: laid out beside each other, or stacked. */
+export type Layout = "row" | "deck";
 /* How a month's worth of day columns is made to fit the note.
    wrap — one strip of days that runs on to the next line at the edge.
    week — broken at the weeks, which lines the columns up but is then
@@ -47,6 +49,8 @@ export interface BlockConfig {
   /** Grid mode, day columns: break the month into weeks, or run it flat. */
   band?: Band;
   side?: Side;
+  /** Several trackers in one block: side by side, or a deck to swipe. */
+  layout?: Layout;
   /** Markdown set beside the trackers, inside the block. */
   text?: string;
   rows?: string[];
@@ -86,6 +90,7 @@ export interface ResolvedConfig {
   size: number;
   band: Band;
   side: Side;
+  layout: Layout;
   round: boolean;
   alwaysShowControls: boolean;
   rows: string[];
@@ -183,6 +188,9 @@ function readConfig(raw: Record<string, unknown>): BlockConfig {
 
   const band = asEnum(raw.band ?? raw.weeks, ["wrap", "week", "none"] as const);
   if (band) config.band = band;
+
+  const layout = asEnum(raw.layout ?? raw.stack, ["row", "deck"] as const);
+  if (layout) config.layout = layout;
 
   const text = asString(raw.text ?? raw.note);
   if (text !== undefined) config.text = text;
@@ -284,6 +292,7 @@ export function resolveConfig(block: BlockConfig, settings: HabbiterSettings): R
     size: clamp(block.size ?? settings.size, MIN_SIZE, MAX_SIZE),
     band: block.band ?? settings.band,
     side: block.side ?? settings.side,
+    layout: block.layout ?? settings.layout,
     round: settings.round,
     alwaysShowControls: settings.alwaysShowControls,
     /* A grid with no rows would draw nothing at all, which reads as a broken
@@ -342,6 +351,7 @@ const KEY_ORDER: Array<keyof BlockConfig> = [
   "size",
   "band",
   "side",
+  "layout",
   "text",
 ];
 
@@ -397,6 +407,7 @@ export function pruneToDefaults(
     "size",
     "band",
     "side",
+    "layout",
   ] as const;
 
   for (const key of sharedKeys) {

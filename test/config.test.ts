@@ -75,6 +75,23 @@ const monthly = pruneToDefaults(
 );
 ok("month mode drops grid keys", !("rows" in monthly) && !("columns" in monthly));
 
+/* --- Several in one block ----------------------------------------------- */
+
+check("stacked is a layout", parseBlock("layout: deck").doc.shared.layout, "deck");
+check("stack is the same key", parseBlock("stack: deck").doc.shared.layout, "deck");
+check("side by side is the other", parseBlock("layout: row").doc.shared.layout, "row");
+check("nonsense is ignored", parseBlock("layout: pile").doc.shared.layout, undefined);
+check(
+  "a layout survives the round trip",
+  parseBlock(
+    toCodeBlock(buildGroup(
+      [{ id: "a", layout: "deck" }, { id: "b", layout: "deck" }],
+      DEFAULT_SETTINGS,
+    )).split("\n").slice(1, -1).join("\n"),
+  ).doc.shared.layout,
+  "deck",
+);
+
 /* --- Text in the block --------------------------------------------------
    This is a paragraph somebody typed, going through YAML and back into
    their note. Newlines, colons, quotes, markdown punctuation and Persian

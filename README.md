@@ -68,6 +68,7 @@ Everything is optional except `id`. Anything left out follows
 | `size` | The side of a cell in pixels, 20 to 44. |
 | `wrap` | `none` for a band of its own, or `start` / `end` to let text run beside it. `left` and `right` are accepted and mean the same. |
 | `trackers` | A list, to put several in one block. See below. |
+| `layout` | Several in one block: `row` side by side, or `deck` stacked with one in front. |
 
 ### A month that fits
 

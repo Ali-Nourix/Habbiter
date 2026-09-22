@@ -152,6 +152,7 @@ export default class HabbiterPlugin extends Plugin {
       sourcePath: ctx.sourcePath,
       text: doc.shared.text ?? "",
       side: resolveConfig(doc.shared, this.store.settings).side,
+      layout: resolveConfig(doc.shared, this.store.settings).layout,
       trackers: mounted,
       reorder: (order) => this.writeOrder(handle, order),
     });

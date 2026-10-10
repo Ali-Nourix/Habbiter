@@ -18,15 +18,19 @@ Habbiter turns a fenced code block into an interactive habit tracker that stays 
 ## See it in action
 
 <p align="center">
-  <img src="docs/images/habbiter-light-overview.svg" alt="Habbiter in the Obsidian light theme, showing month and Persian calendar trackers" width="49%" />
-  <img src="docs/images/habbiter-dark-overview.svg" alt="Habbiter in the Obsidian dark theme, showing month and Persian calendar trackers" width="49%" />
+  <img src="docs/images/habbiter-hero.svg" alt="Habbiter promotional banner showing calendars, Persian RTL support, and wrapping grids" width="100%" />
 </p>
 
 <p align="center">
-  <img src="docs/images/habbiter-light-layouts.svg" alt="Habbiter grid, wrapping, and text-beside layouts" width="82%" />
+  <img src="docs/images/habbiter-light-overview.svg" alt="Habbiter in the Obsidian light theme, showing a month calendar, Persian RTL tracker, and wrapping grid" width="49%" />
+  <img src="docs/images/habbiter-dark-overview.svg" alt="Habbiter in the Obsidian dark theme, showing a month calendar, Persian RTL tracker, and wrapping grid" width="49%" />
 </p>
 
-The screenshots come from the preview harness and show the real tracker renderer in light and dark themes, including Persian calendar text set in **Vazirmatn**.
+<p align="center">
+  <img src="docs/images/habbiter-light-layouts.svg" alt="Habbiter wrapping grid layout" width="82%" />
+</p>
+
+The gallery uses the real tracker renderer from the preview harness. Persian UI text is rendered with **Vazirmatn**.
 
 ---
 

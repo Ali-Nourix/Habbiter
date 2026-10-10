@@ -1,18 +1,36 @@
 # Habbiter
 
-Habit and tracker grids that live inside a note.
+**Habit trackers and custom grids, directly inside your Obsidian notes.**
 
-Drop one anywhere in a note: a month drawn as a calendar with a checkbox in
-place of each day, or a grid of rows and columns you name yourself. Tick a box
-each day; the note stays a note.
+[![CI](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/Ali-Nourix/Habbiter?display_name=tag&sort=semver)](https://github.com/Ali-Nourix/Habbiter/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Obsidian Plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED)](https://obsidian.md/plugins)
 
-Nothing about it is styled by the plugin. Every colour, corner and hit area is
-read from Obsidian's own variables, and from your theme's where the theme
-offers a better one — so a tracker looks like the vault it is in, in light and
-in dark, and follows the accent you picked in Appearance settings. There is no
-card, no border and no fill behind it: it sits on the page the way a table
-does. The buttons that change it appear when you point at it, and are always
-there on a touch screen and whenever the keyboard is in the grid.
+Habbiter turns a fenced code block into an interactive habit tracker that stays part of your Markdown note. Use a calendar for daily habits or build a custom grid of checkboxes and counters—without adding a separate dashboard or changing the look of your vault.
+
+- **Track your way:** monthly calendars, custom rows and columns, checkboxes, and counters with goals.
+- **Fits your vault:** uses Obsidian and theme variables, supports light and dark themes, and follows right-to-left layouts.
+- **Persian calendar support:** Persian and Gregorian calendars, localized weekday and month names, and configurable numerals.
+- **Edit in place:** create and configure trackers with a live preview; arrange multiple trackers side by side or in a stack.
+- **Keep notes intact:** tracker definitions live in Markdown, while tick data is stored separately in the plugin's data file.
+
+> [!NOTE]
+> Habbiter is an Obsidian community plugin. The repository includes the built `main.js`, so manual installation does not require a local build.
+
+## Contents
+
+- [Install](#install)
+- [Create a tracker](#making-one)
+- [Block options](#what-the-block-can-say)
+- [Layouts and examples](#a-month-that-fits)
+- [Keyboard and accessibility](#using-one)
+- [Persian calendar](#persian)
+- [Data storage](#where-the-ticks-are-kept)
+- [Theming](#theming)
+- [Development and tests](#building)
+- [Releasing](#releasing)
+- [License](#license)
 
 ## Install
 

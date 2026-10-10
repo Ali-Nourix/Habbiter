@@ -6,7 +6,7 @@
 
 [![Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md/plugins)
 [![Latest Release](https://img.shields.io/github/v/release/Ali-Nourix/Habbiter?style=for-the-badge&logo=github&label=Release)](https://github.com/Ali-Nourix/Habbiter/releases/latest)
-[![License](https://img.shields.io/badge/License-MIT-2F80ED?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-46A171?style=for-the-badge)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Ali-Nourix/Habbiter/ci.yml?style=for-the-badge&label=CI)](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml)
 
 Habbiter turns a fenced code block into an interactive habit tracker that stays part of your Markdown note. Use a calendar for daily habits or build a custom grid of checkboxes and counters—without adding a separate dashboard or changing the look of your vault.

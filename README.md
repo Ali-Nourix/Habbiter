@@ -1,38 +1,23 @@
+<div align="center">
+
 # Habbiter
 
 **Habit trackers and custom grids, directly inside your Obsidian notes.**
 
-[![CI](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml)
-[![Latest Release](https://img.shields.io/github/v/release/Ali-Nourix/Habbiter?display_name=tag&sort=semver)](https://github.com/Ali-Nourix/Habbiter/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Obsidian Plugin](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED)](https://obsidian.md/plugins)
+[![Obsidian](https://img.shields.io/badge/Obsidian-Community%20Plugin-7C3AED?style=for-the-badge&logo=obsidian&logoColor=white)](https://obsidian.md/plugins)
+[![Latest Release](https://img.shields.io/github/v/release/Ali-Nourix/Habbiter?style=for-the-badge&logo=github&label=Release)](https://github.com/Ali-Nourix/Habbiter/releases/latest)
+[![License](https://img.shields.io/badge/License-MIT-2F80ED?style=for-the-badge)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/Ali-Nourix/Habbiter/ci.yml?style=for-the-badge&label=CI)](https://github.com/Ali-Nourix/Habbiter/actions/workflows/ci.yml)
 
 Habbiter turns a fenced code block into an interactive habit tracker that stays part of your Markdown note. Use a calendar for daily habits or build a custom grid of checkboxes and counters—without adding a separate dashboard or changing the look of your vault.
 
-- **Track your way:** monthly calendars, custom rows and columns, checkboxes, and counters with goals.
-- **Fits your vault:** uses Obsidian and theme variables, supports light and dark themes, and follows right-to-left layouts.
-- **Persian calendar support:** Persian and Gregorian calendars, localized weekday and month names, and configurable numerals.
-- **Edit in place:** create and configure trackers with a live preview; arrange multiple trackers side by side or in a stack.
-- **Keep notes intact:** tracker definitions live in Markdown, while tick data is stored separately in the plugin's data file.
+[**Install**](#install) · [**Examples**](#making-one) · [**Features**](#what-the-block-can-say) · [**Development**](#building)
 
-> [!NOTE]
-> Habbiter is an Obsidian community plugin. The repository includes the built `main.js`, so manual installation does not require a local build.
+</div>
 
-## Contents
+---
 
-- [Install](#install)
-- [Create a tracker](#making-one)
-- [Block options](#what-the-block-can-say)
-- [Layouts and examples](#a-month-that-fits)
-- [Keyboard and accessibility](#using-one)
-- [Persian calendar](#persian)
-- [Data storage](#where-the-ticks-are-kept)
-- [Theming](#theming)
-- [Development and tests](#building)
-- [Releasing](#releasing)
-- [License](#license)
-
-## Install
+## Install## Install
 
 Until it is in the community list, copy `main.js`, `manifest.json` and
 `styles.css` from this repository into `<vault>/.obsidian/plugins/habbiter/`,

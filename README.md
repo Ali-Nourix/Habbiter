@@ -15,9 +15,22 @@ Habbiter turns a fenced code block into an interactive habit tracker that stays 
 
 </div>
 
+## See it in action
+
+<p align="center">
+  <img src="docs/images/habbiter-light-overview.svg" alt="Habbiter in the Obsidian light theme, showing month and Persian calendar trackers" width="49%" />
+  <img src="docs/images/habbiter-dark-overview.svg" alt="Habbiter in the Obsidian dark theme, showing month and Persian calendar trackers" width="49%" />
+</p>
+
+<p align="center">
+  <img src="docs/images/habbiter-light-layouts.svg" alt="Habbiter grid, wrapping, and text-beside layouts" width="82%" />
+</p>
+
+The screenshots come from the preview harness and show the real tracker renderer in light and dark themes, including Persian calendar text set in **Vazirmatn**.
+
 ---
 
-## Install## Install
+## Install
 
 Until it is in the community list, copy `main.js`, `manifest.json` and
 `styles.css` from this repository into `<vault>/.obsidian/plugins/habbiter/`,

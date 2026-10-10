@@ -415,4 +415,4 @@ a check that the committed `main.js` is the one the source builds.
 
 ## License
 
-MIT.
+GNU General Public License v3.0.

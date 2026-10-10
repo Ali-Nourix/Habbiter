@@ -11,6 +11,8 @@
 
 Habbiter turns a fenced code block into an interactive habit tracker that stays part of your Markdown note. Use a calendar for daily habits or build a custom grid of checkboxes and counters—without adding a separate dashboard or changing the look of your vault.
 
+[فارسی](README.fa.md) · [Install](#install) · [Examples](#making-one) · [Development](#building)
+
 [**Install**](#install) · [**Examples**](#making-one) · [**Features**](#what-the-block-can-say) · [**Development**](#building)
 
 </div>

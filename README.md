@@ -1,3 +1,7 @@
+![Habbiter — project cover](docs/images/readme-cover-20261023.svg)
+
+<sub>AI-generated editorial cover; not an application screenshot.</sub>
+
 <div align="center">
 
 # Habbiter
@@ -16,6 +20,16 @@ Habbiter turns a fenced code block into an interactive habit tracker that stays 
 [**Install**](#install) · [**Examples**](#making-one) · [**Features**](#what-the-block-can-say) · [**Development**](#building)
 
 </div>
+
+## Start here
+
+| Your goal | Guide |
+| --- | --- |
+| Create your first tracker | [Install](#install) · [Making one](#making-one) |
+| Choose a layout | [Block options](#what-the-block-can-say) · [Side by side](#several-side-by-side) · [Decks](#stacked-one-in-front) |
+| Keep your progress safe | [Data storage](#where-the-ticks-are-kept) · [Building](#building) |
+
+Tracker definitions stay in Markdown; ticks are stored in the plugin data file. Preserve data.json when backing up or moving a vault.
 
 ## See it in action
 
@@ -371,7 +385,7 @@ scrolls sideways under a row-label column that stays put, and the label has to
 be opaque or the cells slide through it. CSS cannot read the colour actually
 painted behind an element, so `--hb-page` is what the label sits on, and it
 defaults to the page. Set it where a tracker lives on something else —
-[Bookcloth](https://github.com/Ali-Nourix/Obsidian-Theme) does this for
+[Bookcloth](https://github.com/Ali-Nourix/Bookcloth) does this for
 callouts, embeds, sidebars and popovers.
 
 ## Building

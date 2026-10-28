@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node test/run.mjs && node esbuild.config.mjs production",
-    "test": "node test/run.mjs"
+    "test": "node test/run.mjs",
+    "test:responsive": "node preview/build.mjs && node preview/responsive.test.mjs"
   },
   "keywords": [
     "obsidian",
@@ -14,12 +15,13 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.2",
     "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.2",
-    "obsidian": "latest",
-    "typescript": "^5.7.2",
     "js-yaml": "^4.1.0",
-    "@types/js-yaml": "^4.0.9"
+    "obsidian": "latest",
+    "playwright": "^1.64.1",
+    "typescript": "^5.7.2"
   }
 }

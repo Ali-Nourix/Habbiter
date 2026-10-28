@@ -34,6 +34,19 @@ interface Sample {
 
 const SAMPLES: Sample[] = [
   {
+    caption: "Mobile regression — smallest configured calendar",
+    block: { id: "mobile-small", title: "کوچک‌ترین تقویم", size: 20, calendar: "persian", locale: "fa" },
+    rtl: true,
+  },
+  {
+    caption: "Mobile regression — largest configured calendar, long title",
+    block: { id: "mobile-large", title: "A long habit title that must not hide the controls", size: 44, totals: true },
+  },
+  {
+    caption: "Mobile regression — weekly bands with labels",
+    block: { id: "mobile-bands", mode: "grid", band: "week", rows: ["Read", "Walk"], size: 44 },
+  },
+  {
     caption: "Month calendar — the default",
     block: { id: "a", title: "Meditate", mode: "month", streak: true, totals: true },
   },

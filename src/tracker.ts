@@ -146,8 +146,8 @@ export class TrackerView extends MarkdownRenderChild {
     el.dataset.cell = this.config.cell;
     el.dataset.side = this.config.side;
     el.toggleClass("is-compact", this.isCompact);
-    /* Not --hb-cell directly: a coarse pointer raises the floor on this, and
-       a value written into the style attribute would outrank that. */
+    /* Keep the configured size separate from the rendered cell: mobile CSS
+       caps large cells without changing the saved desktop preference. */
     el.style.setProperty("--hb-size", `${this.config.size}px`);
 
     const anchor = this.anchorDate();

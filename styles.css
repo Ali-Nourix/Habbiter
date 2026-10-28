@@ -1007,15 +1007,88 @@
 
 /* --- Conditions ----------------------------------------------------------- */
 
-/* A finger is not a pointer: the controls cannot be summoned by hovering, so
-   they are simply there, and a cell is never smaller than a fingertip. */
-@media (pointer: coarse) {
-  .hb-root {
-    --hb-hit: 36px;
-    --hb-cell: max(var(--hb-size), 30px);
+/* On a phone the calendar stays compact, small configured sizes are
+   honoured, and header actions wrap instead of covering the title. */
+@media (max-width: 600px), (pointer: coarse) {
+  .hb-root,
+  .hb-root.is-compact {
+    /* Honour small configured sizes; cap larger desktop cells on phones. */
+    --hb-cell: min(var(--hb-size), 26px);
+    --hb-hit: 32px;
+    --hb-gap: 4px;
+    --hb-gap-wide: 8px;
+    min-inline-size: 0;
   }
 
-  .hb-tools {
+  .hb-main,
+  .hb-slot,
+  .hb-deckroot,
+  .hb-deck,
+  .hb-card {
+    min-inline-size: 0;
+  }
+
+  .hb-block .hb-pair,
+  .hb-block[data-side="end"] .hb-pair {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .hb-text {
+    flex: 0 1 auto;
+    overflow-wrap: anywhere;
+  }
+
+  .hb-group {
+    gap: 16px 12px;
+  }
+
+  .hb-card {
+    padding: 8px;
+  }
+
+  .hb-root .hb-head,
+  .hb-root.is-compact .hb-head {
+    /* Let the grid, not the combined header text, decide the widget width. */
+    inline-size: 0;
+    min-inline-size: 100%;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .hb-root .hb-title,
+  .hb-root.is-compact .hb-title {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+    padding-inline-end: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .hb-root .hb-month,
+  .hb-root.is-compact .hb-month {
+    overflow-wrap: anywhere;
+  }
+
+  .hb-root .hb-break,
+  .hb-root.is-compact .hb-break {
+    display: none;
+  }
+
+  .hb-root .hb-stats,
+  .hb-root.is-compact .hb-stats {
+    flex-wrap: wrap;
+    margin-inline-start: 0;
+    white-space: normal;
+  }
+
+  .hb-root .hb-tools,
+  .hb-root.is-compact .hb-tools {
+    /* No overlay on the title: all actions remain visible and tappable. */
+    position: static;
+    flex: 0 0 auto;
+    margin-inline-start: 0;
     opacity: 1;
     pointer-events: auto;
   }

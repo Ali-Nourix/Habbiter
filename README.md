@@ -388,6 +388,19 @@ defaults to the page. Set it where a tracker lives on something else —
 [Bookcloth](https://github.com/Ali-Nourix/Bookcloth) does this for
 callouts, embeds, sidebars and popovers.
 
+## Mobile layout
+
+On narrow screens (600px or less) and touch devices, month calendars fill
+the note width in seven equal columns. A block containing multiple trackers
+automatically becomes a stacked deck, even if its saved desktop layout is a
+row. Swipe left/right to switch cards (mirrored in RTL notes); the arrow
+buttons and dots are available too. Vertical gestures still scroll the note,
+and swiping a day does not mark it done.
+
+This is display-only: desktop layout, tracker order and habit data are not
+rewritten. Trackers must belong to the same Habbiter block to share a deck;
+separate code blocks remain independent.
+
 ## Building
 
 ```sh

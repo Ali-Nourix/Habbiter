@@ -85,3 +85,8 @@ svg.svg-icon {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* Match the note gutter rather than a desktop preview canvas on phones. */
+@media (max-width: 600px), (pointer: coarse) {
+  #samples { padding: 16px; }
+}

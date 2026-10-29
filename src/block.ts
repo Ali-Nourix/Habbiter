@@ -46,7 +46,7 @@ export class TrackerBlock extends MarkdownRenderChild {
   }
 
   override onload(): void {
-    const { app, sourcePath, text, side, layout, trackers } = this.deps;
+    const { app, sourcePath, text, side, trackers } = this.deps;
     const el = this.containerEl;
     el.addClass("hb-block");
 
@@ -60,14 +60,24 @@ export class TrackerBlock extends MarkdownRenderChild {
       const view = new TrackerView(host.createDiv(), { ...trackers[0].deps, compact: hasText });
       this.views.push(view);
       this.addChild(view);
-    } else if (layout === "deck") {
-      const deck = new TrackerDeck(host, this.deps);
-      this.views.push(...deck.build());
-      this.addChild(deck);
     } else {
-      const group = new TrackerGroup(host, this.deps);
-      this.views.push(...group.build());
-      this.addChild(group);
+      /* Mobile is a presentation choice, never a rewrite of the fence. Keep
+         desktop's saved layout, and use a swipeable deck on touch/narrow
+         screens. Only one set of views is mounted at a time. */
+      const media = (el.ownerDocument.defaultView ?? window).matchMedia("(max-width: 600px), (pointer: coarse)");
+      let current: TrackerDeck | TrackerGroup | null = null;
+      const mount = () => {
+        if (current) this.removeChild(current);
+        host.empty();
+        const stacked = media.matches || this.deps.layout === "deck";
+        host.dataset.layout = stacked ? "deck" : "row";
+        current = stacked ? new TrackerDeck(host, this.deps) : new TrackerGroup(host, this.deps);
+        this.views.splice(0, this.views.length, ...current.build());
+        this.addChild(current);
+      };
+      mount();
+      media.addEventListener("change", mount);
+      this.register(() => media.removeEventListener("change", mount));
     }
 
     if (!hasText) return;

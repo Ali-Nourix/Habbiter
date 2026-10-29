@@ -1,6 +1,6 @@
 {
   "name": "habbiter",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "Habit and tracker grids that live inside your notes.",
   "main": "main.js",
   "scripts": {

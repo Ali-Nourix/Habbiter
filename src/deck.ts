@@ -21,7 +21,9 @@ import type { GroupDeps } from "./group";
 /* How far across before a press is a swipe rather than a tap, and how far
    before letting go commits to the next card. */
 const DRAG_STARTS_AT = 8;
-const COMMIT_FRACTION = 0.28;
+const COMMIT_FRACTION = 0.22;
+const FLICK_DISTANCE = 24;
+const FLICK_SPEED = 0.45; // pixels per millisecond
 
 export class TrackerDeck extends MarkdownRenderChild {
   private readonly views: TrackerView[] = [];
@@ -30,6 +32,7 @@ export class TrackerDeck extends MarkdownRenderChild {
   private deckEl!: HTMLElement;
   private active = 0;
   private drag: Drag | null = null;
+  private suppressClickUntil = 0;
 
   constructor(
     containerEl: HTMLElement,
@@ -214,70 +217,89 @@ export class TrackerDeck extends MarkdownRenderChild {
   /* --- The swipe ---------------------------------------------------------- */
 
   private listen(): void {
-    this.deckEl.addEventListener("pointerdown", (event) => this.press(event));
+    const doc = this.deckEl.ownerDocument;
+    this.registerDomEvent(this.deckEl, "pointerdown", (event) => this.press(event));
+    /* Track outside the card too. Capture is acquired only after horizontal
+       intent is clear, so a normal tap still reaches the original cell. */
+    this.registerDomEvent(doc, "pointermove", (event) => this.moved(event), { passive: false, capture: true });
+    this.registerDomEvent(doc, "pointerup", (event) => this.released(event), true);
+    this.registerDomEvent(doc, "pointercancel", (event) => this.released(event), true);
+    this.registerDomEvent(this.deckEl, "lostpointercapture", (event) => {
+      if (event.target === this.deckEl && this.drag?.id === event.pointerId) this.finishDrag();
+    });
+    this.registerDomEvent(this.deckEl, "click", (event) => {
+      if (performance.now() > this.suppressClickUntil) return;
+      this.suppressClickUntil = 0;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    this.register(() => this.finishDrag());
   }
 
   private press(event: PointerEvent): void {
-    if (event.button !== 0 || this.drag) return;
-    /* Not captured and not prevented yet: until this turns out to be a
-       swipe it is somebody reaching for a checkbox. */
-    this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, live: false };
-
-    const move = (e: PointerEvent) => this.moved(e);
-    const up = (e: PointerEvent) => this.released(e, move, up);
-    this.deckEl.addEventListener("pointermove", move);
-    this.deckEl.addEventListener("pointerup", up);
-    this.deckEl.addEventListener("pointercancel", up);
+    if (event.button !== 0 || !event.isPrimary || this.drag) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const control = target?.closest(".hb-tools, a, input, textarea, select, [contenteditable='true']");
+    // Live Preview itself is contenteditable. Only skip editable controls
+    // inside this deck, not the editor that happens to contain the block.
+    if (control && this.deckEl.contains(control)) return;
+    /* A deliberately wide flat grid owns horizontal scrolling. Swipe from
+       its header/card margin instead of stealing its scroll gesture. */
+    const body = target?.closest<HTMLElement>(".hb-body");
+    if (body && body.scrollWidth > body.clientWidth + 1) return;
+    this.drag = {
+      id: event.pointerId, x: event.clientX, y: event.clientY,
+      started: event.timeStamp, live: false, vertical: false,
+    };
   }
 
   private moved(event: PointerEvent): void {
     const drag = this.drag;
-    if (!drag || event.pointerId !== drag.id) return;
-
+    if (!drag || event.pointerId !== drag.id || drag.vertical) return;
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
-
     if (!drag.live) {
-      /* Across, and more across than down — otherwise it is a scroll, and
-         the page is entitled to it. */
+      /* Once the gesture is vertical, never turn a note scroll into a card
+         change when the finger happens to drift sideways later. */
+      if (Math.abs(dy) >= DRAG_STARTS_AT && Math.abs(dy) >= Math.abs(dx)) {
+        drag.vertical = true;
+        return;
+      }
       if (Math.abs(dx) < DRAG_STARTS_AT || Math.abs(dx) <= Math.abs(dy)) return;
       drag.live = true;
       this.deckEl.setPointerCapture(drag.id);
       this.deckEl.addClass("is-swiping");
     }
-
     event.preventDefault();
-    /* Clamped: a drag that carries on past the width of the deck should
-       not carry the card on with it. */
+    event.stopPropagation();
     const travel = Math.max(-1, Math.min(1, dx / this.reach()));
     this.deckEl.style.setProperty("--hb-swipe", String(travel));
     this.deckEl.style.setProperty("--hb-pull", String(Math.abs(travel)));
   }
 
-  private released(
-    event: PointerEvent,
-    move: (e: PointerEvent) => void,
-    up: (e: PointerEvent) => void,
-  ): void {
+  private released(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.id) return;
+    const dx = event.clientX - drag.x;
+    const duration = Math.max(1, event.timeStamp - drag.started);
+    const commit = event.type === "pointerup" && drag.live && (
+      Math.abs(dx) / this.reach() > COMMIT_FRACTION ||
+      (Math.abs(dx) >= FLICK_DISTANCE && Math.abs(dx) / duration >= FLICK_SPEED)
+    );
+    this.finishDrag();
+    if (commit) this.step(dx < 0 ? this.reading() : -this.reading());
+  }
+
+  private finishDrag(): void {
     const drag = this.drag;
     this.drag = null;
-    this.deckEl.removeEventListener("pointermove", move);
-    this.deckEl.removeEventListener("pointerup", up);
-    this.deckEl.removeEventListener("pointercancel", up);
-    if (!drag) return;
-
-    if (drag.live) {
+    if (drag?.live) {
+      /* Browsers can synthesize a click after a drag. It must not tick the
+         day under the finger (or a cell on the newly exposed card). */
+      this.suppressClickUntil = performance.now() + 350;
       if (this.deckEl.hasPointerCapture(drag.id)) this.deckEl.releasePointerCapture(drag.id);
-      this.deckEl.removeClass("is-swiping");
-
-      const travelled = (event.clientX - drag.x) / this.reach();
-      /* Past the threshold it commits; short of it the card springs back,
-         which is the same transition running to a depth that did not
-         change. */
-      if (Math.abs(travelled) > COMMIT_FRACTION) {
-        this.step(travelled < 0 ? this.reading() : -this.reading());
-      }
     }
+    this.deckEl.removeClass("is-swiping");
     this.layOut();
   }
 
@@ -290,6 +312,8 @@ interface Drag {
   id: number;
   x: number;
   y: number;
+  started: number;
+  vertical: boolean;
   /** False until the press has travelled far enough to be a swipe. */
   live: boolean;
 }

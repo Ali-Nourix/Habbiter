@@ -71,6 +71,14 @@ export class Component {
     if (this.loaded) child.load();
     return child;
   }
+  removeChild(child) {
+    this.children = this.children.filter((item) => item !== child);
+    child.unload();
+  }
+  registerDomEvent(el, type, listener, options) {
+    el.addEventListener(type, listener, options);
+    this.register(() => el.removeEventListener(type, listener, options));
+  }
   register(cleanup) {
     this.cleanups.push(cleanup);
   }
@@ -117,3 +125,9 @@ export function parseYaml() {
 export function stringifyYaml() {
   return "";
 }
+
+export const MarkdownRenderer = {
+  async render(_app, text, el) {
+    el.createEl("p", { text });
+  },
+};

@@ -374,7 +374,15 @@
   /* Room for the cards that show under the front one, and for the shadow
      that lifts it off them. */
   padding: var(--hb-gap) var(--hb-gap-wide) calc(var(--hb-peek) * 3);
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
+}
+
+/* .hb-body is a scroll container even when a month fits. The browser stops
+   consulting ancestors' touch-action there, so the calendar itself must
+   opt into vertical-only panning for horizontal deck swipes to reach us. */
+.hb-deck .hb-cal,
+.hb-deck .hb-body.is-wrapped {
+  touch-action: pan-y pinch-zoom;
 }
 
 /* The one place a tracker takes a surface of its own. Everywhere else it is
@@ -401,7 +409,7 @@
      the surface it sits on, which is how a shadow works and is why the
      cards under the front one had no edge at all on a dark page. */
   box-shadow:
-    var(--shadow-s),
+    var(--shadow-s, 0 2px 6px var(--hb-line)),
     inset 0 0 0 1px var(--hb-line);
   /* The stack reads front to back, so the front card has to paint last. */
   z-index: calc(20 - var(--hb-depth));
@@ -439,7 +447,7 @@
    rather than flying away and waiting there to be walked back to. */
 .hb-card.is-front {
   box-shadow:
-    var(--shadow-l),
+    var(--shadow-l, 0 4px 12px var(--hb-line)),
     inset 0 0 0 1px var(--hb-line);
 }
 
@@ -1007,12 +1015,12 @@
 
 /* --- Conditions ----------------------------------------------------------- */
 
-/* On a phone the calendar stays compact, small configured sizes are
-   honoured, and header actions wrap instead of covering the title. */
+/* Mobile calendars fill the note. Non-calendar grids stay compact, while
+   header actions wrap instead of covering the title. */
 @media (max-width: 600px), (pointer: coarse) {
   .hb-root,
   .hb-root.is-compact {
-    /* Honour small configured sizes; cap larger desktop cells on phones. */
+    /* Flat grids retain their compact size; month cells fill seven tracks. */
     --hb-cell: min(var(--hb-size), 26px);
     --hb-hit: 32px;
     --hb-gap: 4px;
@@ -1044,8 +1052,70 @@
     gap: 16px 12px;
   }
 
+  /* The note owns the width on mobile, not the desktop cell-size setting. */
+  .hb-block,
+  .hb-main,
+  .hb-deckroot,
+  .hb-root {
+    inline-size: 100%;
+    box-sizing: border-box;
+  }
+
+  .hb-deckroot {
+    --hb-hit: 36px;
+    overflow: hidden;
+  }
+
+  .hb-deck {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 0;
+  }
+
   .hb-card {
-    padding: 8px;
+    box-sizing: border-box;
+    inline-size: 100%;
+    justify-content: flex-start;
+    padding: 12px;
+  }
+
+  .hb-cal {
+    inline-size: 100%;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .hb-root .hb-cal button.hb-cell,
+  .hb-cal .hb-blank {
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 1;
+    max-block-size: 56px;
+  }
+
+  .hb-cal .hb-num {
+    font-size: clamp(12px, 3.5vw, 16px);
+  }
+
+  .hb-deckbar {
+    min-inline-size: 0;
+    padding-block: 4px;
+  }
+
+  .hb-dots {
+    min-inline-size: 0;
+    overflow-x: auto;
+    gap: 0;
+  }
+
+  .hb-dot {
+    flex: 0 0 28px;
+    inline-size: 28px;
+    block-size: 28px;
+    box-sizing: border-box;
+    border: 10px solid var(--hb-page);
+  }
+
+  .hb-dot.is-active {
+    transform: none;
   }
 
   .hb-root .hb-head,
